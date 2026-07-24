@@ -779,7 +779,7 @@ function renderTotals(){
 function attachmentUrl(attachment){
   if(!attachment) return null;
   if(attachment.url) return attachment.url; // backward compatibility with older embedded photos
-  if(attachment.filename) return `attachments/${attachment.filename}`;
+  if(attachment.filename) return `attatchments/${attachment.filename}`;
   return null;
 }
 function showImageModal(attachment){
