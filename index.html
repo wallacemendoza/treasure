@@ -198,20 +198,16 @@
   td.name-col{ text-align:left; font-family:'Oswald',sans-serif; font-weight:600; color:var(--bone); letter-spacing:.2px; white-space:normal; }
   td.name-col input{
     background:#0e0b09; border:1px solid var(--brass-dim); border-radius:4px; color:var(--bone);
-    font-family:'Oswald',sans-serif; font-weight:600; padding:4px 6px; width:78px; font-size:.7rem;
-  }
-  .sub-line{
-    font-family:'Courier Prime',monospace; font-size:.6rem; color:var(--dim);
-    margin-top:2px; letter-spacing:.2px; white-space:normal;
+    font-family:'Oswald',sans-serif; font-weight:600; padding:4px 6px; width:110px; font-size:.7rem;
   }
   .sub-fields{ display:flex; gap:8px; margin-top:4px; flex-wrap:wrap; }
   .sub-fields label{
     display:flex; flex-direction:column; gap:2px; font-family:'Courier Prime',monospace;
     font-size:.55rem; color:var(--dim); text-transform:uppercase; letter-spacing:.5px;
   }
-  .sub-fields input{
+  .sub-fields input, .sub-fields select{
     background:#0e0b09; border:1px solid var(--brass-dim); border-radius:4px; color:var(--bone);
-    font-family:'Courier Prime',monospace; font-size:.62rem; padding:2px 4px; width:52px;
+    font-family:'Courier Prime',monospace; font-size:.62rem; padding:2px 4px; width:64px;
   }
 
   .paid{ background:#1a1210; color:var(--bone); border:1px solid var(--blood-bright); border-radius:5px; padding:2px 5px; font-weight:700; display:inline-block; font-size:.66rem; }
@@ -220,21 +216,13 @@
   .optional{ background:#1c2412; color:var(--olive-bright); border:1px dashed var(--olive); border-radius:5px; padding:2px 5px; font-weight:600; display:inline-block; font-size:.62rem; }
   .empty{ color:#3c352c; }
 
-  .debt-badge{ display:inline-block; background:var(--blood); color:#fff; border-radius:20px; padding:2px 10px; font-family:'Courier Prime',monospace; font-size:.68rem; font-weight:700; margin-left:6px; vertical-align:middle; }
-  .no-debt-badge{ display:inline-block; background:#20301a; color:var(--olive-bright); border:1px solid var(--olive); border-radius:20px; padding:2px 10px; font-family:'Courier Prime',monospace; font-size:.68rem; font-weight:700; margin-left:6px; vertical-align:middle; }
-
   /* edit-mode cell controls */
   .cell-edit{ display:flex; flex-direction:column; gap:2px; align-items:center; }
   .cell-edit select, .cell-edit input{
     background:#0e0b09; border:1px solid var(--brass-dim); border-radius:4px; color:var(--bone);
     font-family:'Courier Prime',monospace; font-size:.6rem; padding:1px 2px; width:50px;
   }
-  .debt-badge{ font-size:.6rem; padding:2px 7px; }
-  .no-debt-badge{ font-size:.6rem; padding:2px 7px; }
-  .debt-edit{ display:flex; gap:4px; align-items:center; margin-left:6px; }
-  .debt-edit select{ background:#0e0b09; border:1px solid var(--brass-dim); border-radius:4px; color:var(--bone); font-size:.65rem; padding:2px; }
-  .debt-edit input{ background:#0e0b09; border:1px solid var(--brass-dim); border-radius:4px; color:var(--bone); font-size:.68rem; padding:2px 4px; width:56px; }
-  .row-remove{ background:transparent; border:none; color:#7a7264; cursor:pointer; font-size:.85rem; }
+  .row-remove{ background:transparent; border:none; color:#7a7264; cursor:pointer; font-size:.6rem; margin-top:4px; text-transform:uppercase; letter-spacing:.5px; font-family:'Courier Prime',monospace; }
   .row-remove:hover{ color:var(--blood-bright); }
 
   /* ── Legend ── */
@@ -288,8 +276,7 @@
     thead th{ padding:5px 2px; font-size:.52rem; }
     td{ padding:4px 2px; font-size:.58rem; }
     .paid,.na,.out,.optional{ padding:1px 3px; font-size:.54rem; }
-    .debt-badge,.no-debt-badge{ font-size:.5rem; padding:1px 5px; margin-left:3px; }
-    td.name-col input{ width:56px; font-size:.6rem; }
+    td.name-col input{ width:80px; font-size:.6rem; }
     .cell-edit select,.cell-edit input{ width:38px; font-size:.5rem; }
   }
 </style>
@@ -329,6 +316,7 @@
             <th class="name-col">Member</th>
             <th>JAN</th><th>FEB</th><th>MAR</th><th>APR</th><th>MAY</th><th>JUN</th>
             <th>JUL</th><th>AUG</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DEC</th>
+            <th>2025 Debt</th>
           </tr>
         </thead>
         <tbody id="membersBody"></tbody>
@@ -343,7 +331,6 @@
       <div class="legend-item"><div class="legend-dot" style="background:#221d18"></div><span>N/A — Not applicable</span></div>
       <div class="legend-item"><div class="legend-dot" style="background:#3a0d0d"></div><span>OUT — Left the club</span></div>
       <div class="legend-item"><div class="legend-dot" style="background:#1c2412;border:1px dashed var(--olive)"></div><span>OPT — Optional contribution</span></div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--blood)"></div><span>Red badge — 2025 debt pending</span></div>
     </div>
   </div>
 
@@ -417,7 +404,7 @@ const defaultState = {
     { name:"SOUSA", debtType:"debt", debtAmount:210,
       months:[m('empty'),m('empty'),m('empty'),m('empty'),m('empty'),m('empty'),m('empty'),m('empty'),m('empty'),m('empty'),m('empty'),m('empty')],
       paid2027:200, debt2025:null, totalDebt:410, active:true },
-    { name:"CEBOLA", debtType:"none", debtAmount:null,
+    { name:"CEBOLA", debtType:"na", debtAmount:null,
       months:[m('paid',30),m('paid',30),m('paid',30),m('paid',30),m('paid',30),m('paid',30),m('paid',14.91),m('na'),m('na'),m('na'),m('na'),m('na')],
       paid2027:0, debt2025:null, totalDebt:2170.83, active:true },
     { name:"QUINONES", debtType:"debt", debtAmount:210,
@@ -430,8 +417,8 @@ const defaultState = {
       months:[m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out')],
       paid2027:'out', debt2025:430, totalDebt:null, active:false },
   ],
-  summary:{ collected2026:90.00, outstanding2025:977.00, activeMembers:8, pendingExpense:2170.83, paidAdvance2027:277.00 },
-  totals:{ collected2026:90.00, grandTotal:1525.92 },
+  summary:{ outstanding2025:977.00, paidAdvance2027:277.00 },
+  totals:{ grandTotal:90.00 },
   expenses:[ { month:"APR (April)", amount:2170.83, reason:"Cebola Loan" } ]
 };
 
@@ -474,6 +461,18 @@ function beltSVG(count){
   }
   return s;
 }
+function computeMemberStats(){
+  let active=0, inactive=0, payingActive=0;
+  state.members.forEach(mem=>{
+    if(mem.active){
+      active++;
+      if(mem.debtType!=='na') payingActive++;
+    } else {
+      inactive++;
+    }
+  });
+  return {active, inactive, payingActive};
+}
 
 /* ============ RENDER ============ */
 function statusMarkup(cell, editable){
@@ -496,24 +495,6 @@ function statusMarkup(cell, editable){
   </div>`;
 }
 
-function debtBadgeMarkup(mem, editable){
-  if(!editable){
-    if(mem.debtType==='debt') return `<span class="debt-badge">$${mem.debtAmount} debt</span>`;
-    if(mem.debtType==='none') return `<span class="no-debt-badge">No Debt</span>`;
-    if(mem.debtType==='out') return `<span class="out">OUT</span>`;
-    return '';
-  }
-  return `<span class="debt-edit">
-    <select data-role="debtType">
-      <option value="none" ${mem.debtType==='none'?'selected':''}>No Debt</option>
-      <option value="debt" ${mem.debtType==='debt'?'selected':''}>Debt</option>
-      <option value="out" ${mem.debtType==='out'?'selected':''}>OUT</option>
-      <option value="na" ${mem.debtType==='na'?'selected':''}>N/A</option>
-    </select>
-    <input type="number" step="0.01" data-role="debtAmount" value="${mem.debtAmount ?? ''}" style="${mem.debtType==='debt'?'':'display:none'}" placeholder="$">
-  </span>`;
-}
-
 function renderMembers(){
   const tbody=document.getElementById('membersBody');
   tbody.innerHTML='';
@@ -522,29 +503,37 @@ function renderMembers(){
     if(!mem.active) tr.classList.add('out-row');
     tr.dataset.idx = idx;
 
-    let nameLine, subLine;
+    let nameLine;
+    let debt2025Cell;
     if(editMode){
-      nameLine = `<input type="text" data-role="name" value="${mem.name}">${debtBadgeMarkup(mem,true)} <button class="row-remove" data-role="removeRow" title="Remove member">✕</button>`;
-      subLine = `<div class="sub-fields">
-        <label>2027<input type="text" data-role="paid2027" value="${mem.paid2027 ?? ''}"></label>
-        <label>'25 debt<input type="text" data-role="debt2025" value="${mem.debt2025 ?? ''}"></label>
-        <label>Total<input type="text" data-role="totalDebt" value="${mem.totalDebt ?? ''}"></label>
-      </div>`;
+      nameLine = `<input type="text" data-role="name" value="${mem.name}">
+        <div class="sub-fields">
+          <label>Status
+            <select data-role="debtType">
+              <option value="none" ${mem.debtType==='none'?'selected':''}>Paying</option>
+              <option value="debt" ${mem.debtType==='debt'?'selected':''}>Debt</option>
+              <option value="na" ${mem.debtType==='na'?'selected':''}>Not Required</option>
+              <option value="out" ${mem.debtType==='out'?'selected':''}>OUT</option>
+            </select>
+          </label>
+          <label>2026 Debt<input type="text" data-role="debtAmount" value="${mem.debtAmount ?? ''}"></label>
+          <label>2027<input type="text" data-role="paid2027" value="${mem.paid2027 ?? ''}"></label>
+          <label>Total<input type="text" data-role="totalDebt" value="${mem.totalDebt ?? ''}"></label>
+        </div>
+        <button class="row-remove" data-role="removeRow" title="Remove member">✕ Remove Member</button>`;
+      debt2025Cell = `<input type="text" data-role="debt2025" value="${mem.debt2025 ?? ''}" style="width:60px">`;
     } else {
-      nameLine = `${mem.name}${debtBadgeMarkup(mem,false)}`;
-      const bits=[];
-      if(mem.paid2027!==null && mem.paid2027!=='') bits.push(`2027 paid: ${fmt(mem.paid2027)}`);
-      if(mem.debt2025!==null) bits.push(`'25 debt: ${fmt(mem.debt2025)}`);
-      if(mem.totalDebt!==null) bits.push(`Total: ${fmt(mem.totalDebt)}`);
-      subLine = bits.length ? `<div class="sub-line">${bits.join(' &middot; ')}</div>` : '';
+      nameLine = mem.name;
+      debt2025Cell = fmt(mem.debt2025);
     }
 
     let monthsCells = mem.months.map((c,mi)=>`<td data-month="${mi}">${statusMarkup(c, editMode)}</td>`).join('');
 
     tr.innerHTML = `
       <td>${idx+1}</td>
-      <td class="name-col">${nameLine}${subLine}</td>
+      <td class="name-col">${nameLine}</td>
       ${monthsCells}
+      <td>${debt2025Cell}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -579,6 +568,7 @@ function renderMembers(){
         const idx = Number(e.target.closest('tr').dataset.idx);
         state.members.splice(idx,1);
         renderMembers();
+        renderSummary();
       });
     });
   }
@@ -615,6 +605,7 @@ function onDebtTypeChange(e){
   else if(mem.debtAmount===null) mem.debtAmount=0;
   mem.active = mem.debtType!=='out';
   renderMembers();
+  renderSummary();
 }
 function onDebtAmountInput(e){
   const tr = e.target.closest('tr');
@@ -625,20 +616,25 @@ function onDebtAmountInput(e){
 function renderSummary(){
   const g=document.getElementById('summaryGrid');
   const s=state.summary;
+  const stats = computeMemberStats();
   const rows=[
-    ['collected2026','2026 Collected (YTD)','green'],
-    ['outstanding2025','Outstanding 2025 Debt','red'],
-    ['activeMembers','Active Members',''],
-    ['pendingExpense','Pending Expense','red'],
-    ['paidAdvance2027','Paid in Advance (2027)','green'],
+    ['outstanding2025','Outstanding 2025 Debt', fmt(s.outstanding2025), 'red', 'summary'],
+    ['payingActive','Active Paying Members', stats.payingActive, '', 'computed'],
+    ['active','Active Members', stats.active, '', 'computed'],
+    ['inactive','Inactive Members', stats.inactive, '', 'computed'],
+    ['paidAdvance2027','Paid in Advance (2027)', fmt(s.paidAdvance2027), 'green', 'summary'],
   ];
-  g.innerHTML = rows.map(([key,label,cls])=>{
-    const val = s[key];
-    const display = key==='activeMembers' ? val : fmt(val);
+  g.innerHTML = rows.map(([key,label,display,cls,kind])=>{
+    if(kind==='computed'){
+      return `<div class="stat-card">
+        <div class="label">${label}</div>
+        <div class="value">${display}</div>
+      </div>`;
+    }
     return `<div class="stat-card">
       <div class="label">${label}</div>
       ${editMode
-        ? `<input data-role="summary-${key}" type="text" value="${val ?? ''}">`
+        ? `<input data-role="summary-${key}" type="text" value="${s[key] ?? ''}">`
         : `<div class="value ${cls==='red'?'red':cls==='green'?'olive':''}">${display}</div>`}
     </div>`;
   }).join('');
@@ -647,7 +643,7 @@ function renderSummary(){
       const key = inp.dataset.role.replace('summary-','');
       inp.addEventListener('input', e=>{
         const v = e.target.value;
-        state.summary[key] = (key==='activeMembers') ? (v===''?null:Number(v)) : (v===''?null: (isNaN(Number(v))?v:Number(v)));
+        state.summary[key] = v===''?null: (isNaN(Number(v))?v:Number(v));
       });
     });
   }
@@ -657,10 +653,6 @@ function renderTotals(){
   const g=document.getElementById('totalsGrid');
   const t=state.totals;
   g.innerHTML = `
-    <div class="stat-card">
-      <div class="label">2026 Collected</div>
-      ${editMode ? `<input data-role="totals-collected2026" type="text" value="${t.collected2026 ?? ''}">` : `<div class="value olive">${fmt(t.collected2026)}</div>`}
-    </div>
     <div class="stat-card">
       <div class="label">Grand Total</div>
       ${editMode ? `<input data-role="totals-grandTotal" type="text" value="${t.grandTotal ?? ''}">` : `<div class="value olive">${fmt(t.grandTotal)}</div>`}
@@ -801,13 +793,11 @@ document.getElementById('addMemberBtn')?.addEventListener('click', ()=>{
     paid2027:0, debt2025:null, totalDebt:null, active:true
   });
   renderMembers();
+  renderSummary();
 });
 document.getElementById('addExpenseBtn')?.addEventListener('click', ()=>{
   state.expenses.push({month:"", amount:0, reason:""});
   renderExpenses();
-});
-document.addEventListener('click', e=>{
-  if(e.target.id==='addMemberBtn') return; // handled above
 });
 
 updateModeUI();
