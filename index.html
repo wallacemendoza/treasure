@@ -327,8 +327,8 @@
           <tr>
             <th style="width:26px">#</th>
             <th class="name-col">Member</th>
-            <th>JAN</th><th>FEV</th><th>MAR</th><th>ABR</th><th>MAI</th><th>JUN</th>
-            <th>JUL</th><th>AGO</th><th>SET</th><th>OUT</th><th>NOV</th><th>DEZ</th>
+            <th>JAN</th><th>FEB</th><th>MAR</th><th>APR</th><th>MAY</th><th>JUN</th>
+            <th>JUL</th><th>AUG</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DEC</th>
           </tr>
         </thead>
         <tbody id="membersBody"></tbody>
@@ -351,9 +351,9 @@
 
   <!-- EXPENSES -->
   <div class="card">
-    <div class="card-title">💸 Expenses / Gastos</div>
+    <div class="card-title">💸 Expenses</div>
     <table class="expenses-table">
-      <thead><tr><th>Month</th><th>Amount / Valor</th><th>Reason / Razão</th><th style="width:26px"></th></tr></thead>
+      <thead><tr><th>Month</th><th>Amount</th><th>Reason</th><th style="width:26px"></th></tr></thead>
       <tbody id="expensesBody"></tbody>
     </table>
     <div class="add-row" id="addExpenseRow" style="display:none">
@@ -362,7 +362,6 @@
 
     <div class="notes-box">
       <strong>📝 Note:</strong> Everything deducted from "PENDING" will be added to "TOTAL (…2024)" and consequently to "TOTAL".<br>
-      <em>(Tudo que for abatido do "PENDENTE" sera adicionado ao "TOTAL (…2024)" e consequentemente ao "TOTAL".)</em>
     </div>
   </div>
 
@@ -370,7 +369,7 @@
 
   <!-- TOTALS -->
   <div class="card">
-    <div class="card-title">🏦 Totals / Totais</div>
+    <div class="card-title">🏦 Totals</div>
     <div class="summary-grid" id="totalsGrid"></div>
   </div>
 
@@ -381,7 +380,17 @@
 
 <script>
 /* ============ DEFAULT STATE ============ */
-const MONTHS = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
+const PORTUGUESE_MONTH_MAP = {
+  "FEV": "FEB",
+  "ABR": "APR",
+  "MAI": "MAY",
+  "AGO": "AUG",
+  "SET": "SEP",
+  "OUT": "OCT",
+  "DEZ": "DEC",
+};
 
 function m(status, amount){ return {status, amount: amount ?? null}; }
 // status: 'paid' | 'na' | 'out' | 'opt' | 'empty'
@@ -427,7 +436,7 @@ const defaultState = {
   ],
   summary:{ collected2026:90.00, outstanding2025:977.00, activeMembers:8, pendingExpense:2170.83, paidAdvance2027:277.00 },
   totals:{ collected2026:90.00, grandTotal:1525.92 },
-  expenses:[ { month:"ABR (April)", amount:2170.83, reason:"Cebola Loan" } ]
+  expenses:[ { month:"APR (April)", amount:2170.83, reason:"Cebola Loan" } ]
 };
 
 let state = JSON.parse(JSON.stringify(defaultState));
@@ -442,6 +451,20 @@ function fmt(v){
   const n = Number(v);
   if(isNaN(n)) return v;
   return '$' + n.toLocaleString('en-US',{minimumFractionDigits: n%1===0?2:2, maximumFractionDigits:2});
+}
+function normalizeExpenseMonth(month){
+  if(typeof month !== 'string') return month;
+  return month.replace(/\bFEV\b|\bABR\b|\bMAI\b|\bAGO\b|\bSET\b|\bOUT\b|\bDEZ\b/g, match => PORTUGUESE_MONTH_MAP[match] || match);
+}
+function normalizeStateForEnglishOnly(nextState){
+  if(!nextState || typeof nextState !== 'object') return nextState;
+  if(Array.isArray(nextState.expenses)){
+    nextState.expenses = nextState.expenses.map(expense => ({
+      ...expense,
+      month: normalizeExpenseMonth(expense.month),
+    }));
+  }
+  return nextState;
 }
 function toast(msg){
   const t=document.getElementById('toast');
@@ -752,7 +775,7 @@ async function loadState(){
     const res = await window.storage.get(STORAGE_KEY, true);
     if(res && res.value){
       const parsed = JSON.parse(res.value);
-      state = parsed;
+      state = normalizeStateForEnglishOnly(parsed);
     }
   }catch(err){
     // no saved state yet — keep default
