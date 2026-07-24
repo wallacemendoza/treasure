@@ -182,21 +182,20 @@
   .table-wrap::-webkit-scrollbar-track{ background:#0d0a08; }
   .table-wrap::-webkit-scrollbar-thumb{ background:var(--brass); border-radius:4px; }
   .table-wrap::-webkit-scrollbar-thumb:hover{ background:var(--blood-bright); }
-  table{ width:100%; border-collapse:collapse; font-size:.8rem; table-layout:fixed; min-width:900px; }
+  table{ width:100%; border-collapse:collapse; font-size:.8rem; table-layout:auto; }
   thead th{
     background:#0d0a08; color:var(--brass);
     font-family:'Oswald',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.3px;
-    padding:8px 6px; text-align:center; border-bottom:2px solid var(--blood-bright); white-space:nowrap;
-    font-size:.68rem; line-height:1.2;
+    padding:8px 4px; text-align:center; border-bottom:2px solid var(--blood-bright); white-space:normal;
+    font-size:.62rem; line-height:1.15;
   }
-  thead th.name-col{ text-align:left; width:180px; }
-  thead th:first-child{ width:30px; }
+  thead th.name-col{ text-align:left; }
   tbody tr{ transition:background .15s; border-bottom:1px solid var(--line); }
   tbody tr:nth-child(even){ background:rgba(255,255,255,.015); }
   tbody tr:hover{ background:rgba(143,28,28,.14); }
   tbody tr.out-row{ opacity:.55; }
-  td{ padding:7px 6px; text-align:center; white-space:nowrap; font-family:'Courier Prime',monospace; font-size:.72rem; }
-  td.name-col{ text-align:left; font-family:'Oswald',sans-serif; font-weight:600; color:var(--bone); letter-spacing:.2px; white-space:normal; min-width:160px; }
+  td{ padding:6px 4px; text-align:center; white-space:nowrap; font-family:'Courier Prime',monospace; font-size:.68rem; }
+  td.name-col{ text-align:left; font-family:'Oswald',sans-serif; font-weight:600; color:var(--bone); letter-spacing:.2px; white-space:normal; }
   td.name-col input{
     background:#0e0b09; border:1px solid var(--brass-dim); border-radius:4px; color:var(--bone);
     font-family:'Oswald',sans-serif; font-weight:600; padding:4px 6px; width:78px; font-size:.7rem;
@@ -284,15 +283,14 @@
   }
   .toast.show{ opacity:1; }
 
-  @media (max-width:768px){
+  @media (max-width:600px){
     .summary-grid{ grid-template-columns:1fr 1fr; }
-    table{ min-width:820px; }
-    thead th{ padding:6px 4px; font-size:.62rem; }
-    td{ padding:5px 4px; font-size:.65rem; }
-    .paid,.na,.out,.optional{ padding:2px 4px; font-size:.6rem; }
-    .debt-badge,.no-debt-badge{ font-size:.55rem; padding:1px 6px; margin-left:3px; }
-    td.name-col input{ width:70px; font-size:.65rem; }
-    .cell-edit select,.cell-edit input{ width:44px; font-size:.55rem; }
+    thead th{ padding:5px 2px; font-size:.52rem; }
+    td{ padding:4px 2px; font-size:.58rem; }
+    .paid,.na,.out,.optional{ padding:1px 3px; font-size:.54rem; }
+    .debt-badge,.no-debt-badge{ font-size:.5rem; padding:1px 5px; margin-left:3px; }
+    td.name-col input{ width:56px; font-size:.6rem; }
+    .cell-edit select,.cell-edit input{ width:38px; font-size:.5rem; }
   }
 </style>
 </head>
@@ -329,8 +327,8 @@
           <tr>
             <th style="width:26px">#</th>
             <th class="name-col">Member</th>
-    <th>JAN</th><th>FEB</th><th>MAR</th><th>APR</th><th>MAY</th><th>JUN</th>
-            <th>JUL</th><th>AUG</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DEC</th>
+            <th>JAN</th><th>FEV</th><th>MAR</th><th>ABR</th><th>MAI</th><th>JUN</th>
+            <th>JUL</th><th>AGO</th><th>SET</th><th>OUT</th><th>NOV</th><th>DEZ</th>
           </tr>
         </thead>
         <tbody id="membersBody"></tbody>
@@ -353,9 +351,9 @@
 
   <!-- EXPENSES -->
   <div class="card">
-    <div class="card-title">💸 Expenses</div>
+    <div class="card-title">💸 Expenses / Gastos</div>
     <table class="expenses-table">
-      <thead><tr><th>Month</th><th>Amount</th><th>Reason</th><th style="width:26px"></th></tr></thead>
+      <thead><tr><th>Month</th><th>Amount / Valor</th><th>Reason / Razão</th><th style="width:26px"></th></tr></thead>
       <tbody id="expensesBody"></tbody>
     </table>
     <div class="add-row" id="addExpenseRow" style="display:none">
@@ -363,7 +361,8 @@
     </div>
 
     <div class="notes-box">
-      <strong>📝 Note:</strong> Everything deducted from "PENDING" will be added to "TOTAL (…2024)" and consequently to "TOTAL".
+      <strong>📝 Note:</strong> Everything deducted from "PENDING" will be added to "TOTAL (…2024)" and consequently to "TOTAL".<br>
+      <em>(Tudo que for abatido do "PENDENTE" sera adicionado ao "TOTAL (…2024)" e consequentemente ao "TOTAL".)</em>
     </div>
   </div>
 
@@ -371,7 +370,7 @@
 
   <!-- TOTALS -->
   <div class="card">
-    <div class="card-title">🏦 Totals</div>
+    <div class="card-title">🏦 Totals / Totais</div>
     <div class="summary-grid" id="totalsGrid"></div>
   </div>
 
