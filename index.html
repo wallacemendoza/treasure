@@ -196,6 +196,8 @@
   tbody tr.out-row{ opacity:.55; }
   td{ padding:6px 4px; text-align:center; white-space:nowrap; font-family:'Courier Prime',monospace; font-size:.68rem; }
   td.name-col{ text-align:left; font-family:'Oswald',sans-serif; font-weight:600; color:var(--bone); letter-spacing:.2px; white-space:normal; }
+  .member-name-link{ cursor:pointer; border-bottom:1px dotted var(--brass); }
+  .member-name-link:hover{ color:var(--blood-bright); border-bottom-color:var(--blood-bright); }
   td.name-col input{
     background:#0e0b09; border:1px solid var(--brass-dim); border-radius:4px; color:var(--bone);
     font-family:'Oswald',sans-serif; font-weight:600; padding:4px 6px; width:110px; font-size:.7rem;
@@ -264,6 +266,14 @@
   }
   .modal h2{ font-family:'Bebas Neue',sans-serif; letter-spacing:3px; font-size:1.3rem; margin-bottom:14px; }
   .modal p.hint{ font-size:.72rem; color:var(--dim); margin-bottom:16px; font-family:'Courier Prime',monospace; }
+  .debt-breakdown{ margin-bottom:18px; text-align:left; }
+  .debt-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 4px; border-bottom:1px solid var(--line);
+    font-family:'Courier Prime',monospace; font-size:.82rem; color:var(--bone-dim);
+  }
+  .debt-row.total{ border-bottom:none; margin-top:4px; padding-top:10px; border-top:1px solid var(--brass-dim); }
+  .debt-row.total span{ color:var(--blood-bright); font-weight:700; font-size:.95rem; }
   .modal input[type=password]{
     width:100%; padding:10px 12px; border-radius:6px; border:1px solid var(--brass-dim);
     background:#0e0b09; color:var(--bone); font-family:'Courier Prime',monospace; margin-bottom:12px; letter-spacing:2px;
@@ -553,7 +563,7 @@ function renderMembers(){
         </div>`;
       debt2025Cell = `<input type="text" data-role="debt2025" value="${mem.debt2025 ?? ''}" style="width:60px">`;
     } else {
-      nameLine = mem.name;
+      nameLine = `<span class="member-name-link" data-role="viewDebt">${mem.name}</span>`;
       debt2025Cell = fmt(mem.debt2025);
     }
 
@@ -619,7 +629,37 @@ function renderMembers(){
         }
       });
     });
+  } else {
+    tbody.querySelectorAll('[data-role="viewDebt"]').forEach(el=>{
+      el.addEventListener('click', e=>{
+        const idx = Number(e.target.closest('tr').dataset.idx);
+        showDebtModal(state.members[idx]);
+      });
+    });
   }
+}
+
+function showDebtModal(mem){
+  const debt2025 = typeof mem.debt2025 === 'number' ? mem.debt2025 : 0;
+  const debt2026 = (mem.debtType==='debt' && typeof mem.debtAmount === 'number') ? mem.debtAmount : 0;
+  const total = debt2025 + debt2026;
+  const overlay=document.createElement('div');
+  overlay.className='overlay';
+  overlay.innerHTML=`
+    <div class="modal">
+      <h2>${mem.name}</h2>
+      <div class="debt-breakdown">
+        <div class="debt-row"><span>2025 Debt</span><span>${fmt(debt2025)}</span></div>
+        <div class="debt-row"><span>2026 Debt</span><span>${fmt(debt2026)}</span></div>
+        <div class="debt-row total"><span>Full Debt</span><span>${fmt(total)}</span></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="debtModalClose">Close</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#debtModalClose').addEventListener('click', ()=> overlay.remove());
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
 }
 function getRowIdx(e){
   const idx = Number(e.target.closest('tr').dataset.idx);
