@@ -417,7 +417,7 @@ const defaultState = {
       months:[m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out'),m('out')],
       paid2027:'out', debt2025:430, totalDebt:null, active:false },
   ],
-  summary:{ outstanding2025:977.00, paidAdvance2027:277.00 },
+  summary:{},
   totals:{ grandTotal:90.00 },
   expenses:[ { month:"APR (April)", amount:2170.83, reason:"Cebola Loan" } ]
 };
@@ -462,16 +462,18 @@ function beltSVG(count){
   return s;
 }
 function computeMemberStats(){
-  let active=0, inactive=0, payingActive=0;
+  let active=0, payingActive=0;
+  let sum2025=0, sum2026=0, sumPaid2027=0;
   state.members.forEach(mem=>{
     if(mem.active){
       active++;
       if(mem.debtType!=='na') payingActive++;
-    } else {
-      inactive++;
     }
+    if(typeof mem.debt2025 === 'number') sum2025 += mem.debt2025;
+    if(mem.debtType==='debt' && typeof mem.debtAmount === 'number') sum2026 += mem.debtAmount;
+    if(typeof mem.paid2027 === 'number') sumPaid2027 += mem.paid2027;
   });
-  return {active, inactive, payingActive};
+  return {active, payingActive, sum2025, sum2026, sumPaid2027, totalOutstanding: sum2025+sum2026};
 }
 
 /* ============ RENDER ============ */
@@ -615,38 +617,18 @@ function onDebtAmountInput(e){
 
 function renderSummary(){
   const g=document.getElementById('summaryGrid');
-  const s=state.summary;
   const stats = computeMemberStats();
   const rows=[
-    ['outstanding2025','Outstanding 2025 Debt', fmt(s.outstanding2025), 'red', 'summary'],
-    ['payingActive','Active Paying Members', stats.payingActive, '', 'computed'],
-    ['active','Active Members', stats.active, '', 'computed'],
-    ['inactive','Inactive Members', stats.inactive, '', 'computed'],
-    ['paidAdvance2027','Paid in Advance (2027)', fmt(s.paidAdvance2027), 'green', 'summary'],
+    ['Outstanding 2025 Debt', fmt(stats.sum2025), 'red'],
+    ['Outstanding Total Debt', fmt(stats.totalOutstanding), 'red'],
+    ['Active Paying Members', stats.payingActive, ''],
+    ['Active Members', stats.active, ''],
+    ['Paid in Advance (2027)', fmt(stats.sumPaid2027), 'green'],
   ];
-  g.innerHTML = rows.map(([key,label,display,cls,kind])=>{
-    if(kind==='computed'){
-      return `<div class="stat-card">
-        <div class="label">${label}</div>
-        <div class="value">${display}</div>
-      </div>`;
-    }
-    return `<div class="stat-card">
+  g.innerHTML = rows.map(([label,display,cls])=>`<div class="stat-card">
       <div class="label">${label}</div>
-      ${editMode
-        ? `<input data-role="summary-${key}" type="text" value="${s[key] ?? ''}">`
-        : `<div class="value ${cls==='red'?'red':cls==='green'?'olive':''}">${display}</div>`}
-    </div>`;
-  }).join('');
-  if(editMode){
-    g.querySelectorAll('input[data-role^="summary-"]').forEach(inp=>{
-      const key = inp.dataset.role.replace('summary-','');
-      inp.addEventListener('input', e=>{
-        const v = e.target.value;
-        state.summary[key] = v===''?null: (isNaN(Number(v))?v:Number(v));
-      });
-    });
-  }
+      <div class="value ${cls==='red'?'red':cls==='green'?'olive':''}">${display}</div>
+    </div>`).join('');
 }
 
 function renderTotals(){
