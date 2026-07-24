@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Treasure USA Chapter – 2026</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    header h1 {
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #f59e0b, #fbbf24, #fde68a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p.subtitle {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      letter-spacing: 1px;
+    }
+
+    /* ── Card wrapper ── */
+    .card {
+      background: #1e293b;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+    .card-title {
+      background: linear-gradient(90deg, #1d4ed8, #2563eb);
+      padding: 14px 20px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    /* ── Main payments table ── */
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      min-width: 900px;
+    }
+    thead th {
+      background: #0f172a;
+      color: #94a3b8;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 12px;
+      text-align: center;
+      border-bottom: 2px solid #334155;
+      white-space: nowrap;
+    }
+    thead th.name-col { text-align: left; }
+
+    tbody tr { transition: background 0.15s; }
+    tbody tr:hover { background: #263348; }
+    tbody tr:nth-child(even) { background: #1a2740; }
+    tbody tr:nth-child(even):hover { background: #263348; }
+
+    td {
+      padding: 9px 12px;
+      text-align: center;
+      border-bottom: 1px solid #1e293b;
+      white-space: nowrap;
+    }
+    td.name-col {
+      text-align: left;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+    td.num-col { font-variant-numeric: tabular-nums; }
+
+    /* ── Cell status colours ── */
+    .paid    { background: #14532d; color: #86efac; border-radius: 6px; padding: 3px 8px; font-weight: 700; }
+    .na      { background: #1e3a5f; color: #7dd3fc; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
+    .out     { background: #3b1f1f; color: #fca5a5; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
+    .optional{ background: #3b2f00; color: #fde68a; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
+    .empty   { color: #475569; }
+
+    /* ── Debt badge ── */
+    .debt-badge {
+      display: inline-block;
+      background: #7f1d1d;
+      color: #fca5a5;
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .no-debt-badge {
+      display: inline-block;
+      background: #14532d;
+      color: #86efac;
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── Legend row ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 14px 20px;
+      border-top: 1px solid #334155;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot {
+      width: 12px; height: 12px; border-radius: 3px;
+    }
+
+    /* ── Summary grid ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      padding: 20px;
+    }
+    .stat-card {
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 18px 20px;
+      border: 1px solid #334155;
+    }
+    .stat-card .label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .stat-card .value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #f59e0b;
+    }
+    .stat-card .value.green { color: #4ade80; }
+    .stat-card .value.red   { color: #f87171; }
+
+    /* ── Expenses table ── */
+    .expenses-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .expenses-table th {
+      background: #0f172a;
+      color: #94a3b8;
+      padding: 10px 16px;
+      text-align: left;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #334155;
+    }
+    .expenses-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #1e293b;
+      text-align: left;
+    }
+    .expenses-table tr:hover { background: #263348; }
+
+    /* ── Notes box ── */
+    .notes-box {
+      background: #0f172a;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 20px;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .notes-box strong { color: #fbbf24; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 16px;
+    }
+
+    /* ── Responsive tweaks ── */
+    @media (max-width: 600px) {
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════════ -->
+  <header>
+    <h1>💎 Treasure USA Chapter</h1>
+    <p class="subtitle">2026 Financial Overview &nbsp;|&nbsp; Monthly Contributions</p>
+  </header>
+
+  <!-- ══════════════════════════════════════════════
+       SUMMARY STATS
+  ══════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-title">📊 Summary</div>
+    <div class="summary-grid">
+      <div class="stat-card">
+        <div class="label">Total Balance (incl. 2024)</div>
+        <div class="value green">$1,525.92</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">2026 Collected (YTD)</div>
+        <div class="value green">$90.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Outstanding 2025 Debt</div>
+        <div class="value red">$977.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Active Members</div>
+        <div class="value">8</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Pending Expense (Cebola Loan)</div>
+        <div class="value red">$2,170.83</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Paid in Advance (2027)</div>
+        <div class="value green">$277.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       MAIN PAYMENTS TABLE
+  ══════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-title">📅 Monthly Contributions – 2026</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px">#</th>
+            <th class="name-col">Member / 2026 Debt</th>
+            <th>JAN</th>
+            <th>FEV</th>
+            <th>MAR</th>
+            <th>ABR</th>
+            <th>MAI</th>
+            <th>JUN</th>
+            <th>JUL</th>
+            <th>AGO</th>
+            <th>SET</th>
+            <th>OUT</th>
+            <th>NOV</th>
+            <th>DEZ</th>
+            <th>Paid 2027</th>
+            <th>2025 Debt</th>
+            <th>2026+2025 Debt</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- 1 – MAURO -->
+          <tr>
+            <td>1</td>
+            <td class="name-col">MAURO <span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td class="empty">—</td>
+            <td><span class="na">N/A</span></td>
+            <td class="empty">—</td>
+          </tr>
+
+          <!-- 2 – TALIBA -->
+          <tr>
+            <td>2</td>
+            <td class="name-col">TALIBA <span class="debt-badge">$60 debt</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td>$0</td>
+            <td>$60</td>
+            <td>$60</td>
+          </tr>
+
+          <!-- 3 – BOLAOITO -->
+          <tr>
+            <td>3</td>
+            <td class="name-col">BOLAOITO <span class="debt-badge">$210 debt</span></td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td>$135</td>
+            <td class="empty">—</td>
+            <td>$345</td>
+          </tr>
+
+          <!-- 4 – RT -->
+          <tr>
+            <td>4</td>
+            <td class="name-col">RT <span class="no-debt-badge">No Debt</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td>$0</td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+
+          <!-- 5 – JOHN -->
+          <tr>
+            <td>5</td>
+            <td class="name-col">JOHN <span class="debt-badge">$210 debt</span></td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td>$52</td>
+            <td class="empty">—</td>
+            <td>$262</td>
+          </tr>
+
+          <!-- 6 – MARUJO -->
+          <tr>
+            <td>6</td>
+            <td class="name-col">MARUJO <span class="debt-badge">$90 debt</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td>$0</td>
+            <td class="empty">—</td>
+            <td>$90</td>
+          </tr>
+
+          <!-- 7 – FISH -->
+          <tr>
+            <td>7</td>
+            <td class="name-col">FISH <span class="debt-badge">$210 debt</span></td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td>$60</td>
+            <td class="empty">—</td>
+            <td>$270</td>
+          </tr>
+
+          <!-- 8 – SOUSA -->
+          <tr>
+            <td>8</td>
+            <td class="name-col">SOUSA <span class="debt-badge">$210 debt</span></td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td>$200</td>
+            <td class="empty">—</td>
+            <td>$410</td>
+          </tr>
+
+          <!-- 9 – CEBOLA -->
+          <tr>
+            <td>9</td>
+            <td class="name-col">CEBOLA <span class="no-debt-badge">No Debt</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$30</span></td>
+            <td><span class="paid">$14.91</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td><span class="na">N/A</span></td>
+            <td>$0</td>
+            <td class="empty">—</td>
+            <td>$2,170.83</td>
+          </tr>
+
+          <!-- 10 – QUINONES -->
+          <tr>
+            <td>10</td>
+            <td class="name-col">QUINONES <span class="debt-badge">$210 debt</span></td>
+            <td><span class="optional">OPT</span></td>
+            <td><span class="optional">OPT</span></td>
+            <td><span class="optional">OPT</span></td>
+            <td><span class="optional">OPT</span></td>
+            <td><span class="optional">OPT</span></td>
+            <td><span class="optional">OPT</span></td>
+            <td><span class="optional">OPT</span></td>
+            <td><span class="optional">OPT</span></td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td>$90</td>
+            <td class="empty">—</td>
+            <td>$300</td>
+          </tr>
+
+          <!-- 11 – CASACO -->
+          <tr>
+            <td>11</td>
+            <td class="name-col">CASACO <span class="out">OUT</span></td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td>$0</td>
+            <td class="empty">—</td>
+            <td class="empty">—</td>
+          </tr>
+
+          <!-- 12 – BARBEIRO -->
+          <tr>
+            <td>12</td>
+            <td class="name-col">BARBEIRO <span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td><span class="out">OUT</span></td>
+            <td>$430</td>
+            <td class="empty">—</td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#14532d"></div>
+        <span>Paid / Amount</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#1e3a5f"></div>
+        <span>N/A – Not applicable</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#3b1f1f"></div>
+        <span>OUT – Left the group</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#3b2f00"></div>
+        <span>OPTIONAL – Voluntary contribution</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#7f1d1d"></div>
+        <span>Names in red → 2025 debt still pending</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#854d0e"></div>
+        <span>Names in yellow → Over 3 months due</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       EXPENSES / GASTOS
+  ══════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-title">💸 Expenses / Gastos</div>
+    <table class="expenses-table">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Amount / Valor</th>
+          <th>Reason / Razão</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ABR (April)</td>
+          <td style="color:#f87171; font-weight:700;">$2,170.83</td>
+          <td>Cebola Loan</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Notes -->
+    <div class="notes-box">
+      <strong>📝 Note:</strong> Everything deducted from "PENDING" will be added to "TOTAL (…2024)" and consequently to "TOTAL".<br>
+      <em>(Tudo que for abatido do "PENDENTE" sera adicionado ao "TOTAL (…2024)" e consequentemente ao "TOTAL".)</em>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       TOTALS
+  ══════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-title">🏦 Totals / Totais</div>
+    <div class="summary-grid">
+      <div class="stat-card">
+        <div class="label">Total (…2024 carry-forward)</div>
+        <div class="value">$1,435.92</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">2026 Collected</div>
+        <div class="value green">$90.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Grand Total</div>
+        <div class="value green">$1,525.92</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Last updated: July 2026 &nbsp;|&nbsp; Treasure USA Chapter
+  </footer>
+
+</body>
+</html>
