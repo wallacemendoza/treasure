@@ -361,7 +361,24 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+/* ============ FIREBASE SETUP ============ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, set as fbSet } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDEBdut5nn9mmDk4SRba5ptyCGTMyrrPdQ",
+  authDomain: "balaios-ledger.firebaseapp.com",
+  databaseURL: "https://balaios-ledger-default-rtdb.firebaseio.com",
+  projectId: "balaios-ledger",
+  storageBucket: "balaios-ledger.firebasestorage.app",
+  messagingSenderId: "824107849900",
+  appId: "1:824107849900:web:3485105b036029b6ff6709"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+const LEDGER_REF = "ledgerState";
 /* ============ DEFAULT STATE ============ */
 const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 
@@ -424,7 +441,6 @@ const defaultState = {
 
 let state = JSON.parse(JSON.stringify(defaultState));
 let editMode = false;
-const STORAGE_KEY = "balaios-ledger-state";
 const EDIT_PASSWORD = "Bmc2133usa";
 
 /* ============ HELPERS ============ */
@@ -742,23 +758,24 @@ function updateModeUI(){
 /* ============ PERSISTENCE ============ */
 async function loadState(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, true);
-    if(res && res.value){
-      const parsed = JSON.parse(res.value);
+    const snapshot = await get(ref(db, LEDGER_REF));
+    if(snapshot.exists()){
+      const parsed = JSON.parse(snapshot.val());
       state = normalizeStateForEnglishOnly(parsed);
     }
   }catch(err){
-    // no saved state yet — keep default
+    console.error('Load failed:', err);
+    toast('Could not reach the database — showing local data');
   }
   renderAll();
 }
 async function saveState(){
   try{
-    const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
-    if(result){ toast('Changes saved for everyone'); }
-    else { toast('Save failed — try again'); }
+    await fbSet(ref(db, LEDGER_REF), JSON.stringify(state));
+    toast('Changes saved for everyone');
   }catch(err){
-    toast('Save failed — try again');
+    console.error('Save failed:', err);
+    toast('Save failed — check your connection and try again');
   }
 }
 
