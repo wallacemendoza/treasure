@@ -174,7 +174,12 @@
   }
 
   /* ── Table ── */
-  .table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .table-wrap{
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none; /* Firefox */
+    -ms-overflow-style:none; /* old Edge/IE */
+  }
+  .table-wrap::-webkit-scrollbar{ display:none; } /* Chrome/Safari */
   table{ width:100%; border-collapse:collapse; font-size:.8rem; min-width:1050px; }
   thead th{
     background:#0d0a08; color:var(--brass);
@@ -287,8 +292,6 @@
     <div class="card-title">📊 Summary</div>
     <div class="summary-grid" id="summaryGrid"></div>
   </div>
-
-  <div class="belt"></div>
 
   <!-- MAIN TABLE -->
   <div class="card">
