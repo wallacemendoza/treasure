@@ -235,6 +235,19 @@
   .row-remove{ background:transparent; border:none; color:#7a7264; cursor:pointer; font-size:.6rem; text-transform:uppercase; letter-spacing:.5px; font-family:'Courier Prime',monospace; }
   .row-remove:hover{ color:var(--blood-bright); }
 
+  /* ── Attachments ── */
+  .attach-controls{ display:flex; gap:6px; align-items:center; }
+  .attach-view{
+    background:#1a1512; border:1px solid var(--brass-dim); border-radius:5px; color:var(--brass);
+    cursor:pointer; font-size:.85rem; padding:3px 7px; line-height:1;
+  }
+  .attach-view:hover{ border-color:var(--blood-bright); color:var(--blood-bright); }
+  .attach-upload-btn{
+    display:inline-block; background:#0e0b09; border:1px dashed var(--brass-dim); border-radius:5px;
+    color:var(--dim); cursor:pointer; font-size:.68rem; padding:3px 7px; font-family:'Courier Prime',monospace;
+  }
+  .attach-upload-btn:hover{ border-color:var(--brass); color:var(--brass); }
+
   /* ── Legend ── */
   .legend{ display:flex; flex-wrap:wrap; gap:14px; padding:14px 20px; border-top:1px solid var(--line); font-size:.72rem; color:var(--dim); font-family:'Courier Prime',monospace; }
   .legend-item{ display:flex; align-items:center; gap:6px; }
@@ -280,6 +293,8 @@
   }
   .modal .err{ color:var(--blood-bright); font-size:.72rem; margin-bottom:10px; min-height:14px; font-family:'Courier Prime',monospace; }
   .modal .modal-actions{ display:flex; gap:8px; justify-content:center; }
+  .image-modal{ max-width:480px; }
+  .attachment-preview{ max-width:100%; max-height:60vh; border-radius:6px; border:1px solid var(--line); margin:0 auto 16px; display:block; }
 
   .toast{
     position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
@@ -358,11 +373,25 @@
   <div class="card">
     <div class="card-title">💸 Expenses</div>
     <table class="expenses-table">
-      <thead><tr><th>Month</th><th>Amount</th><th>Reason</th><th style="width:26px"></th></tr></thead>
+      <thead><tr><th>Month</th><th>Amount</th><th>Reason</th><th style="width:60px">📎</th><th style="width:26px"></th></tr></thead>
       <tbody id="expensesBody"></tbody>
     </table>
     <div class="add-row" id="addExpenseRow" style="display:none">
       <button class="btn" id="addExpenseBtn">+ Add Expense</button>
+    </div>
+  </div>
+
+  <div class="belt"></div>
+
+  <!-- INCOME -->
+  <div class="card">
+    <div class="card-title">💰 Income <small id="incomeTotalLabel"></small></div>
+    <table class="expenses-table">
+      <thead><tr><th>Month</th><th>Amount</th><th>Source</th><th style="width:60px">📎</th><th style="width:26px"></th></tr></thead>
+      <tbody id="incomeBody"></tbody>
+    </table>
+    <div class="add-row" id="addIncomeRow" style="display:none">
+      <button class="btn" id="addIncomeBtn">+ Add Income</button>
     </div>
   </div>
 
@@ -383,6 +412,7 @@
 /* ============ FIREBASE SETUP ============ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set as fbSet } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDEBdut5nn9mmDk4SRba5ptyCGTMyrrPdQ",
@@ -396,6 +426,7 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
+const storage = getStorage(firebaseApp);
 const LEDGER_REF = "ledgerState";
 /* ============ DEFAULT STATE ============ */
 const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
@@ -454,7 +485,8 @@ const defaultState = {
   ],
   summary:{},
   totals:{ grandTotal:90.00 },
-  expenses:[ { month:"APR (April)", amount:2170.83, reason:"Cebola Loan" } ]
+  expenses:[ { month:"APR (April)", amount:2170.83, reason:"Cebola Loan", attachment:null } ],
+  income:[]
 };
 
 let state = JSON.parse(JSON.stringify(defaultState));
@@ -480,6 +512,9 @@ function normalizeStateForEnglishOnly(nextState){
       ...expense,
       month: normalizeExpenseMonth(expense.month),
     }));
+  }
+  if(!Array.isArray(nextState.income)){
+    nextState.income = [];
   }
   return nextState;
 }
@@ -737,6 +772,89 @@ function renderTotals(){
   }
 }
 
+/* ============ ATTACHMENTS ============ */
+async function uploadAttachment(file, folder){
+  const path = `attachments/${folder}/${Date.now()}-${file.name}`;
+  const fileRef = sRef(storage, path);
+  await uploadBytes(fileRef, file);
+  const url = await getDownloadURL(fileRef);
+  return { url, path, name: file.name };
+}
+async function deleteAttachment(attachment){
+  if(!attachment || !attachment.path) return;
+  try{ await deleteObject(sRef(storage, attachment.path)); }
+  catch(err){ console.error('Delete attachment failed:', err); }
+}
+function showImageModal(attachment){
+  const overlay=document.createElement('div');
+  overlay.className='overlay';
+  overlay.innerHTML=`
+    <div class="modal image-modal">
+      <h2>${attachment.name || 'Attachment'}</h2>
+      <img src="${attachment.url}" alt="${attachment.name||'attachment'}" class="attachment-preview">
+      <div class="modal-actions">
+        <a class="btn" href="${attachment.url}" target="_blank" rel="noopener">Open Original</a>
+        <button class="btn ghost" id="imgModalClose">Close</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#imgModalClose').addEventListener('click', ()=> overlay.remove());
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+}
+function attachmentCellMarkup(item, idx, editable){
+  const has = item.attachment && item.attachment.url;
+  if(!editable){
+    return has
+      ? `<button class="attach-view" data-role="viewAttachment" data-idx="${idx}" title="View attachment">📎</button>`
+      : `<span class="empty">—</span>`;
+  }
+  if(has){
+    return `<div class="attach-controls">
+      <button class="attach-view" data-role="viewAttachment" data-idx="${idx}" title="View attachment">📎</button>
+      <button class="row-remove" data-role="removeAttachment" data-idx="${idx}" title="Remove attachment">✕</button>
+    </div>`;
+  }
+  return `<div class="attach-controls">
+    <label class="attach-upload-btn" title="Attach a photo">📎+
+      <input type="file" accept="image/*" data-role="uploadAttachment" data-idx="${idx}" style="display:none">
+    </label>
+  </div>`;
+}
+function wireAttachmentControls(tbody, list, folder, rerender){
+  tbody.querySelectorAll('[data-role="viewAttachment"]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const idx = Number(e.currentTarget.dataset.idx);
+      if(list[idx] && list[idx].attachment) showImageModal(list[idx].attachment);
+    });
+  });
+  tbody.querySelectorAll('[data-role="removeAttachment"]').forEach(btn=>{
+    btn.addEventListener('click', async e=>{
+      const idx = Number(e.currentTarget.dataset.idx);
+      const old = list[idx] && list[idx].attachment;
+      if(list[idx]) list[idx].attachment = null;
+      rerender();
+      if(old) await deleteAttachment(old);
+    });
+  });
+  tbody.querySelectorAll('[data-role="uploadAttachment"]').forEach(inp=>{
+    inp.addEventListener('change', async e=>{
+      const idx = Number(e.currentTarget.dataset.idx);
+      const file = e.currentTarget.files[0];
+      if(!file) return;
+      toast('Uploading attachment...');
+      try{
+        const attachment = await uploadAttachment(file, folder);
+        if(list[idx]) list[idx].attachment = attachment;
+        rerender();
+        toast('Attachment uploaded — click Save Changes to keep it');
+      }catch(err){
+        console.error('Upload failed:', err);
+        toast('Upload failed — try again');
+      }
+    });
+  });
+}
+
 function renderExpenses(){
   const tbody=document.getElementById('expensesBody');
   tbody.innerHTML = state.expenses.map((ex,idx)=>{
@@ -745,6 +863,7 @@ function renderExpenses(){
         <td>${ex.month}</td>
         <td style="color:var(--blood-bright);font-weight:700;">${fmt(ex.amount)}</td>
         <td>${ex.reason}</td>
+        <td>${attachmentCellMarkup(ex, idx, false)}</td>
         <td></td>
       </tr>`;
     }
@@ -752,6 +871,7 @@ function renderExpenses(){
       <td><input type="text" data-role="exMonth" value="${ex.month}" style="width:110px"></td>
       <td><input type="number" step="0.01" data-role="exAmount" value="${ex.amount}" style="width:90px"></td>
       <td><input type="text" data-role="exReason" value="${ex.reason}" style="width:160px"></td>
+      <td>${attachmentCellMarkup(ex, idx, true)}</td>
       <td><button class="row-remove" data-role="removeExpense">✕</button></td>
     </tr>`;
   }).join('');
@@ -770,6 +890,51 @@ function renderExpenses(){
       renderExpenses();
     }));
   }
+  wireAttachmentControls(tbody, state.expenses, 'expenses', renderExpenses);
+}
+
+function renderIncome(){
+  const tbody=document.getElementById('incomeBody');
+  tbody.innerHTML = state.income.map((inc,idx)=>{
+    if(!editMode){
+      return `<tr>
+        <td>${inc.month}</td>
+        <td style="color:var(--olive-bright);font-weight:700;">${fmt(inc.amount)}</td>
+        <td>${inc.source}</td>
+        <td>${attachmentCellMarkup(inc, idx, false)}</td>
+        <td></td>
+      </tr>`;
+    }
+    return `<tr data-idx="${idx}">
+      <td><input type="text" data-role="incMonth" value="${inc.month}" style="width:110px"></td>
+      <td><input type="number" step="0.01" data-role="incAmount" value="${inc.amount}" style="width:90px"></td>
+      <td><input type="text" data-role="incSource" value="${inc.source}" style="width:160px" placeholder="e.g. Loan repayment, T-shirt sales"></td>
+      <td>${attachmentCellMarkup(inc, idx, true)}</td>
+      <td><button class="row-remove" data-role="removeIncome">✕</button></td>
+    </tr>`;
+  }).join('');
+  if(editMode){
+    tbody.querySelectorAll('input[data-role="incMonth"]').forEach(inp=>inp.addEventListener('input', e=>{
+      state.income[Number(e.target.closest('tr').dataset.idx)].month = e.target.value;
+    }));
+    tbody.querySelectorAll('input[data-role="incAmount"]').forEach(inp=>inp.addEventListener('input', e=>{
+      state.income[Number(e.target.closest('tr').dataset.idx)].amount = Number(e.target.value)||0;
+      updateIncomeTotalLabel();
+    }));
+    tbody.querySelectorAll('input[data-role="incSource"]').forEach(inp=>inp.addEventListener('input', e=>{
+      state.income[Number(e.target.closest('tr').dataset.idx)].source = e.target.value;
+    }));
+    tbody.querySelectorAll('button[data-role="removeIncome"]').forEach(btn=>btn.addEventListener('click', e=>{
+      state.income.splice(Number(e.target.closest('tr').dataset.idx),1);
+      renderIncome();
+    }));
+  }
+  wireAttachmentControls(tbody, state.income, 'income', renderIncome);
+  updateIncomeTotalLabel();
+}
+function updateIncomeTotalLabel(){
+  const total = state.income.reduce((sum,inc)=> sum + (typeof inc.amount==='number'?inc.amount:0), 0);
+  document.getElementById('incomeTotalLabel').textContent = `· Total: ${fmt(total)}`;
 }
 
 function renderAll(){
@@ -778,9 +943,11 @@ function renderAll(){
   renderSummary();
   renderTotals();
   renderExpenses();
+  renderIncome();
   document.getElementById('editHintMonths').textContent = editMode ? '· click fields to edit, then Save Changes' : '';
   document.getElementById('addMemberRow').style.display = editMode ? 'block' : 'none';
   document.getElementById('addExpenseRow').style.display = editMode ? 'block' : 'none';
+  document.getElementById('addIncomeRow').style.display = editMode ? 'block' : 'none';
 }
 
 /* ============ AUTH ============ */
@@ -867,6 +1034,10 @@ document.getElementById('addMemberBtn')?.addEventListener('click', ()=>{
 document.getElementById('addExpenseBtn')?.addEventListener('click', ()=>{
   state.expenses.push({month:"", amount:0, reason:""});
   renderExpenses();
+});
+document.getElementById('addIncomeBtn')?.addEventListener('click', ()=>{
+  state.income.push({month:"", amount:0, source:""});
+  renderIncome();
 });
 
 updateModeUI();
