@@ -10,8 +10,8 @@
 
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
+      background: #111111;
+      color: #f5f5f5;
       min-height: 100vh;
       padding: 24px 16px 48px;
     }
@@ -26,7 +26,7 @@
       font-weight: 800;
       letter-spacing: 2px;
       text-transform: uppercase;
-      background: linear-gradient(135deg, #f59e0b, #fbbf24, #fde68a);
+      background: linear-gradient(135deg, #cc0000, #ff2222, #ff6666);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -34,20 +34,21 @@
     header p.subtitle {
       margin-top: 6px;
       font-size: 0.85rem;
-      color: #94a3b8;
+      color: #aaaaaa;
       letter-spacing: 1px;
     }
 
     /* ── Card wrapper ── */
     .card {
-      background: #1e293b;
+      background: #1a1a1a;
       border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       overflow: hidden;
       margin-bottom: 32px;
+      border: 1px solid #2a2a2a;
     }
     .card-title {
-      background: linear-gradient(90deg, #1d4ed8, #2563eb);
+      background: linear-gradient(90deg, #990000, #cc0000);
       padding: 14px 20px;
       font-size: 0.95rem;
       font-weight: 700;
@@ -68,48 +69,48 @@
       min-width: 900px;
     }
     thead th {
-      background: #0f172a;
-      color: #94a3b8;
+      background: #0d0d0d;
+      color: #aaaaaa;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       padding: 10px 12px;
       text-align: center;
-      border-bottom: 2px solid #334155;
+      border-bottom: 2px solid #cc0000;
       white-space: nowrap;
     }
     thead th.name-col { text-align: left; }
 
     tbody tr { transition: background 0.15s; }
-    tbody tr:hover { background: #263348; }
-    tbody tr:nth-child(even) { background: #1a2740; }
-    tbody tr:nth-child(even):hover { background: #263348; }
+    tbody tr:hover { background: #2a0000; }
+    tbody tr:nth-child(even) { background: #161616; }
+    tbody tr:nth-child(even):hover { background: #2a0000; }
 
     td {
       padding: 9px 12px;
       text-align: center;
-      border-bottom: 1px solid #1e293b;
+      border-bottom: 1px solid #222222;
       white-space: nowrap;
     }
     td.name-col {
       text-align: left;
       font-weight: 600;
-      color: #f1f5f9;
+      color: #ffffff;
     }
     td.num-col { font-variant-numeric: tabular-nums; }
 
     /* ── Cell status colours ── */
-    .paid    { background: #14532d; color: #86efac; border-radius: 6px; padding: 3px 8px; font-weight: 700; }
-    .na      { background: #1e3a5f; color: #7dd3fc; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
-    .out     { background: #3b1f1f; color: #fca5a5; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
-    .optional{ background: #3b2f00; color: #fde68a; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
-    .empty   { color: #475569; }
+    .paid    { background: #1a1a1a; color: #ffffff; border: 1px solid #cc0000; border-radius: 6px; padding: 3px 8px; font-weight: 700; }
+    .na      { background: #2a2a2a; color: #aaaaaa; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
+    .out     { background: #3a0000; color: #ff6666; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
+    .optional{ background: #222222; color: #dddddd; border: 1px dashed #666; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
+    .empty   { color: #444444; }
 
     /* ── Debt badge ── */
     .debt-badge {
       display: inline-block;
-      background: #7f1d1d;
-      color: #fca5a5;
+      background: #cc0000;
+      color: #ffffff;
       border-radius: 20px;
       padding: 2px 10px;
       font-size: 0.75rem;
@@ -119,8 +120,9 @@
     }
     .no-debt-badge {
       display: inline-block;
-      background: #14532d;
-      color: #86efac;
+      background: #333333;
+      color: #ffffff;
+      border: 1px solid #555555;
       border-radius: 20px;
       padding: 2px 10px;
       font-size: 0.75rem;
@@ -135,9 +137,9 @@
       flex-wrap: wrap;
       gap: 12px;
       padding: 14px 20px;
-      border-top: 1px solid #334155;
+      border-top: 1px solid #333333;
       font-size: 0.78rem;
-      color: #94a3b8;
+      color: #aaaaaa;
     }
     .legend-item { display: flex; align-items: center; gap: 6px; }
     .legend-dot {
@@ -152,25 +154,25 @@
       padding: 20px;
     }
     .stat-card {
-      background: #0f172a;
+      background: #0d0d0d;
       border-radius: 12px;
       padding: 18px 20px;
-      border: 1px solid #334155;
+      border: 1px solid #2a2a2a;
     }
     .stat-card .label {
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: #64748b;
+      color: #777777;
       margin-bottom: 6px;
     }
     .stat-card .value {
       font-size: 1.6rem;
       font-weight: 800;
-      color: #f59e0b;
+      color: #ffffff;
     }
-    .stat-card .value.green { color: #4ade80; }
-    .stat-card .value.red   { color: #f87171; }
+    .stat-card .value.green { color: #ffffff; }
+    .stat-card .value.red   { color: #cc0000; }
 
     /* ── Expenses table ── */
     .expenses-table {
@@ -179,40 +181,40 @@
       font-size: 0.85rem;
     }
     .expenses-table th {
-      background: #0f172a;
-      color: #94a3b8;
+      background: #0d0d0d;
+      color: #aaaaaa;
       padding: 10px 16px;
       text-align: left;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      border-bottom: 2px solid #334155;
+      border-bottom: 2px solid #cc0000;
     }
     .expenses-table td {
       padding: 10px 16px;
-      border-bottom: 1px solid #1e293b;
+      border-bottom: 1px solid #222222;
       text-align: left;
     }
-    .expenses-table tr:hover { background: #263348; }
+    .expenses-table tr:hover { background: #2a0000; }
 
     /* ── Notes box ── */
     .notes-box {
-      background: #0f172a;
-      border-left: 4px solid #f59e0b;
+      background: #0d0d0d;
+      border-left: 4px solid #cc0000;
       border-radius: 0 8px 8px 0;
       padding: 14px 18px;
       margin: 16px 20px;
       font-size: 0.82rem;
-      color: #94a3b8;
+      color: #aaaaaa;
       line-height: 1.6;
     }
-    .notes-box strong { color: #fbbf24; }
+    .notes-box strong { color: #ffffff; }
 
     /* ── Footer ── */
     footer {
       text-align: center;
       font-size: 0.75rem;
-      color: #475569;
+      color: #555555;
       margin-top: 16px;
     }
 
@@ -238,10 +240,6 @@
   <div class="card">
     <div class="card-title">📊 Summary</div>
     <div class="summary-grid">
-      <div class="stat-card">
-        <div class="label">Total Balance (incl. 2024)</div>
-        <div class="value green">$1,525.92</div>
-      </div>
       <div class="stat-card">
         <div class="label">2026 Collected (YTD)</div>
         <div class="value green">$90.00</div>
@@ -554,28 +552,24 @@
     <!-- Legend -->
     <div class="legend">
       <div class="legend-item">
-        <div class="legend-dot" style="background:#14532d"></div>
+        <div class="legend-dot" style="background:#cc0000; border:1px solid #cc0000"></div>
         <span>Paid / Amount</span>
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#1e3a5f"></div>
+        <div class="legend-dot" style="background:#2a2a2a"></div>
         <span>N/A – Not applicable</span>
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#3b1f1f"></div>
+        <div class="legend-dot" style="background:#3a0000"></div>
         <span>OUT – Left the group</span>
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#3b2f00"></div>
+        <div class="legend-dot" style="background:#222222; border:1px dashed #666"></div>
         <span>OPTIONAL – Voluntary contribution</span>
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#7f1d1d"></div>
+        <div class="legend-dot" style="background:#cc0000"></div>
         <span>Names in red → 2025 debt still pending</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:#854d0e"></div>
-        <span>Names in yellow → Over 3 months due</span>
       </div>
     </div>
   </div>
@@ -596,7 +590,7 @@
       <tbody>
         <tr>
           <td>ABR (April)</td>
-          <td style="color:#f87171; font-weight:700;">$2,170.83</td>
+      <td style="color:#cc0000; font-weight:700;">$2,170.83</td>
           <td>Cebola Loan</td>
         </tr>
       </tbody>
@@ -615,10 +609,6 @@
   <div class="card">
     <div class="card-title">🏦 Totals / Totais</div>
     <div class="summary-grid">
-      <div class="stat-card">
-        <div class="label">Total (…2024 carry-forward)</div>
-        <div class="value">$1,435.92</div>
-      </div>
       <div class="stat-card">
         <div class="label">2026 Collected</div>
         <div class="value green">$90.00</div>
