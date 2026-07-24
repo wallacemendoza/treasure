@@ -247,6 +247,11 @@
     color:var(--dim); cursor:pointer; font-size:.68rem; padding:3px 7px; font-family:'Courier Prime',monospace;
   }
   .attach-upload-btn:hover{ border-color:var(--brass); color:var(--brass); }
+  .attach-input-row{ flex-wrap:wrap; }
+  .attach-filename-input{
+    background:#0e0b09; border:1px solid var(--brass-dim); border-radius:4px; color:var(--bone);
+    font-family:'Courier Prime',monospace; font-size:.68rem; padding:3px 6px; width:100px;
+  }
 
   /* ── Legend ── */
   .legend{ display:flex; flex-wrap:wrap; gap:14px; padding:14px 20px; border-top:1px solid var(--line); font-size:.72rem; color:var(--dim); font-family:'Courier Prime',monospace; }
@@ -412,7 +417,6 @@
 /* ============ FIREBASE SETUP ============ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set as fbSet } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDEBdut5nn9mmDk4SRba5ptyCGTMyrrPdQ",
@@ -426,7 +430,6 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
-const storage = getStorage(firebaseApp);
 const LEDGER_REF = "ledgerState";
 /* ============ DEFAULT STATE ============ */
 const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
@@ -772,28 +775,24 @@ function renderTotals(){
   }
 }
 
-/* ============ ATTACHMENTS ============ */
-async function uploadAttachment(file, folder){
-  const path = `attachments/${folder}/${Date.now()}-${file.name}`;
-  const fileRef = sRef(storage, path);
-  await uploadBytes(fileRef, file);
-  const url = await getDownloadURL(fileRef);
-  return { url, path, name: file.name };
-}
-async function deleteAttachment(attachment){
-  if(!attachment || !attachment.path) return;
-  try{ await deleteObject(sRef(storage, attachment.path)); }
-  catch(err){ console.error('Delete attachment failed:', err); }
+/* ============ ATTACHMENTS (referenced by filename in the repo's /attachments folder) ============ */
+function attachmentUrl(attachment){
+  if(!attachment) return null;
+  if(attachment.url) return attachment.url; // backward compatibility with older embedded photos
+  if(attachment.filename) return `attachments/${attachment.filename}`;
+  return null;
 }
 function showImageModal(attachment){
+  const url = attachmentUrl(attachment);
+  const label = attachment.filename || attachment.name || 'Attachment';
   const overlay=document.createElement('div');
   overlay.className='overlay';
   overlay.innerHTML=`
     <div class="modal image-modal">
-      <h2>${attachment.name || 'Attachment'}</h2>
-      <img src="${attachment.url}" alt="${attachment.name||'attachment'}" class="attachment-preview">
+      <h2>${label}</h2>
+      <img src="${url}" alt="${label}" class="attachment-preview">
       <div class="modal-actions">
-        <a class="btn" href="${attachment.url}" target="_blank" rel="noopener">Open Original</a>
+        <a class="btn" href="${url}" target="_blank" rel="noopener">Open Full Size</a>
         <button class="btn ghost" id="imgModalClose">Close</button>
       </div>
     </div>`;
@@ -802,7 +801,7 @@ function showImageModal(attachment){
   overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
 }
 function attachmentCellMarkup(item, idx, editable){
-  const has = item.attachment && item.attachment.url;
+  const has = !!attachmentUrl(item.attachment);
   if(!editable){
     return has
       ? `<button class="attach-view" data-role="viewAttachment" data-idx="${idx}" title="View attachment">📎</button>`
@@ -814,10 +813,9 @@ function attachmentCellMarkup(item, idx, editable){
       <button class="row-remove" data-role="removeAttachment" data-idx="${idx}" title="Remove attachment">✕</button>
     </div>`;
   }
-  return `<div class="attach-controls">
-    <label class="attach-upload-btn" title="Attach a photo">📎+
-      <input type="file" accept="image/*" data-role="uploadAttachment" data-idx="${idx}" style="display:none">
-    </label>
+  return `<div class="attach-controls attach-input-row">
+    <input type="text" class="attach-filename-input" data-role="attachFilename" data-idx="${idx}" placeholder="filename.jpg">
+    <button class="attach-view" data-role="attachSubmit" data-idx="${idx}" title="Link this filename">📎 Set</button>
   </div>`;
 }
 function wireAttachmentControls(tbody, list, folder, rerender){
@@ -828,28 +826,30 @@ function wireAttachmentControls(tbody, list, folder, rerender){
     });
   });
   tbody.querySelectorAll('[data-role="removeAttachment"]').forEach(btn=>{
-    btn.addEventListener('click', async e=>{
+    btn.addEventListener('click', e=>{
       const idx = Number(e.currentTarget.dataset.idx);
-      const old = list[idx] && list[idx].attachment;
       if(list[idx]) list[idx].attachment = null;
       rerender();
-      if(old) await deleteAttachment(old);
     });
   });
-  tbody.querySelectorAll('[data-role="uploadAttachment"]').forEach(inp=>{
-    inp.addEventListener('change', async e=>{
+  function commitFilename(idx, value){
+    const val = (value||'').trim();
+    if(!val) return;
+    if(list[idx]) list[idx].attachment = { filename: val };
+    rerender();
+  }
+  tbody.querySelectorAll('[data-role="attachSubmit"]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
       const idx = Number(e.currentTarget.dataset.idx);
-      const file = e.currentTarget.files[0];
-      if(!file) return;
-      toast('Uploading attachment...');
-      try{
-        const attachment = await uploadAttachment(file, folder);
-        if(list[idx]) list[idx].attachment = attachment;
-        rerender();
-        toast('Attachment uploaded — click Save Changes to keep it');
-      }catch(err){
-        console.error('Upload failed:', err);
-        toast('Upload failed — try again');
+      const input = tbody.querySelector(`input[data-role="attachFilename"][data-idx="${idx}"]`);
+      commitFilename(idx, input && input.value);
+    });
+  });
+  tbody.querySelectorAll('[data-role="attachFilename"]').forEach(inp=>{
+    inp.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){
+        e.preventDefault();
+        commitFilename(Number(e.currentTarget.dataset.idx), e.currentTarget.value);
       }
     });
   });
