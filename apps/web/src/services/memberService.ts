@@ -17,6 +17,14 @@ function isLegacyMemberColumnError(message: string) {
   );
 }
 
+function hasUnsupportedLegacyFieldValues(payload: Partial<MemberPayload>) {
+  return Boolean(payload.nickname?.trim() || payload.birth_date);
+}
+
+function getLegacySchemaSaveError() {
+  return new Error("Nickname and birthday cannot be saved yet because your live Supabase members table is missing those columns. Apply the latest members SQL migration first.");
+}
+
 function mapLegacyDirectoryRow(
   row: Omit<MemberDirectoryRow, "nickname" | "birth_date" | "prior_balance_due" | "archived_at"> & {
     archived_at?: string | null;
@@ -162,6 +170,10 @@ export async function createMemberByAdmin(payload: MemberPayload): Promise<void>
     throw new Error(error.message);
   }
 
+  if (hasUnsupportedLegacyFieldValues(payload)) {
+    throw getLegacySchemaSaveError();
+  }
+
   const { birth_date: _birthDate, nickname: _nickname, ...legacyPayload } = payload;
   const { error: legacyError } = await supabase.from("members").insert(legacyPayload);
   if (legacyError) throw new Error(legacyError.message);
@@ -173,6 +185,10 @@ export async function updateMemberByAdmin(memberId: string, payload: Partial<Mem
 
   if (!isLegacyMemberColumnError(error.message)) {
     throw new Error(error.message);
+  }
+
+  if (hasUnsupportedLegacyFieldValues(payload)) {
+    throw getLegacySchemaSaveError();
   }
 
   const { birth_date: _birthDate, nickname: _nickname, ...legacyPayload } = payload;
