@@ -625,6 +625,109 @@ a {
   margin-top: var(--space-4);
 }
 
+.member-detail-photo-wrap {
+  display: flex;
+  align-items: flex-start;
+}
+
+.member-detail-photo {
+  width: 112px;
+  height: 112px;
+  border-radius: 18px;
+  object-fit: cover;
+}
+
+.member-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+.member-card {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.member-card-top {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.member-card-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 20px;
+  object-fit: cover;
+}
+
+.member-card-heading h3 {
+  margin: 0;
+  font-family: "Bebas Neue", "Oswald", sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+  color: var(--text-strong);
+}
+
+.member-card-heading p {
+  margin-top: 4px;
+}
+
+.member-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.member-card-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.member-card-meta dt {
+  font-family: "Courier Prime", monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  margin-bottom: 4px;
+}
+
+.member-card-meta dd {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 0.92rem;
+}
+
+.member-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.member-photo-preview-wrap {
+  margin-top: var(--space-3);
+}
+
+.member-photo-preview {
+  width: 112px;
+  height: 112px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
 .details-grid p {
   margin: 0;
 }
@@ -968,6 +1071,10 @@ a {
 
   .two-col,
   .details-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .member-card-meta {
     grid-template-columns: minmax(0, 1fr);
   }
 }

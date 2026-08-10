@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import type { Member } from "@treasure/shared";
 import {
   Avatar,
@@ -7,7 +7,6 @@ import {
   Button,
   Card,
   ConfirmDialog,
-  DataTable,
   EmptyState,
   ErrorState,
   Input,
@@ -26,6 +25,7 @@ import {
   updateMemberByAdmin,
   type MemberPayload,
 } from "../../services/memberService";
+import { resolveMemberPhotoUrl, uploadMemberPhoto } from "../../services/storageService";
 import type { MemberDirectoryRow } from "../../types/app";
 import { cleanPhoneInput, formatDate, formatPhone, getAgeFromBirthDate } from "../../utils/format";
 
@@ -41,7 +41,6 @@ interface FormState {
   city: string;
   state: string;
   zip: string;
-  photo_url: string;
   emergency_contact_name: string;
   emergency_contact_relationship: string;
   emergency_contact_phone: string;
@@ -62,7 +61,6 @@ const EMPTY_FORM: FormState = {
   city: "",
   state: "",
   zip: "",
-  photo_url: "",
   emergency_contact_name: "",
   emergency_contact_relationship: "",
   emergency_contact_phone: "",
@@ -101,7 +99,6 @@ function mapMemberToForm(member: Member): FormState {
     city: member.city ?? "",
     state: member.state ?? "",
     zip: member.zip ?? "",
-    photo_url: member.photo_url ?? "",
     emergency_contact_name: member.emergency_contact_name ?? "",
     emergency_contact_relationship: member.emergency_contact_relationship ?? "",
     emergency_contact_phone: member.emergency_contact_phone ?? "",
@@ -124,7 +121,7 @@ function formToPayload(form: FormState): MemberPayload {
     city: toNullable(form.city),
     state: toNullable(form.state),
     zip: toNullable(form.zip),
-    photo_url: toNullable(form.photo_url),
+    photo_url: null,
     emergency_contact_name: toNullable(form.emergency_contact_name),
     emergency_contact_relationship: toNullable(form.emergency_contact_relationship),
     emergency_contact_phone: toNullable(form.emergency_contact_phone),
@@ -157,6 +154,10 @@ function Members() {
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [formState, setFormState] = useState<FormState>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
+  const [memberPhotoUrls, setMemberPhotoUrls] = useState<Record<string, string | null>>({});
+  const [selectedMemberPhotoUrl, setSelectedMemberPhotoUrl] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
 
   const [archiveMemberId, setArchiveMemberId] = useState<string | null>(null);
 
@@ -169,6 +170,18 @@ function Members() {
         ? await listMembersForAdmin(archivedFilter !== "current")
         : await listMembersDirectory();
       setMembers(rows);
+
+      const resolvedEntries = await Promise.all(
+        rows.map(async (member) => {
+          try {
+            return [member.id, await resolveMemberPhotoUrl(member.photo_url)] as const;
+          } catch {
+            return [member.id, null] as const;
+          }
+        }),
+      );
+
+      setMemberPhotoUrls(Object.fromEntries(resolvedEntries));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load members.");
     } finally {
@@ -203,6 +216,8 @@ function Members() {
     setFormState(EMPTY_FORM);
     setEditingMemberId(null);
     setFormError(null);
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
     setShowFormModal(true);
   }
 
@@ -217,6 +232,8 @@ function Members() {
       }
       setFormState(mapMemberToForm(member));
       setEditingMemberId(member.id);
+      setPhotoFile(null);
+      setPhotoPreviewUrl(memberPhotoUrls[member.id] ?? member.photo_url ?? null);
       setShowFormModal(true);
     } catch (loadError) {
       setFormError(loadError instanceof Error ? loadError.message : "Unable to load member details.");
@@ -235,8 +252,18 @@ function Members() {
       setIsSaving(true);
       const member = await getMemberByIdForAdmin(memberId);
       setSelectedMember(member);
+      if (member?.photo_url) {
+        try {
+          setSelectedMemberPhotoUrl(await resolveMemberPhotoUrl(member.photo_url));
+        } catch {
+          setSelectedMemberPhotoUrl(null);
+        }
+      } else {
+        setSelectedMemberPhotoUrl(null);
+      }
     } catch {
       setSelectedMember(null);
+      setSelectedMemberPhotoUrl(null);
     } finally {
       setIsSaving(false);
     }
@@ -244,6 +271,18 @@ function Members() {
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {
     setFormState((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handlePhotoFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const nextFile = event.target.files?.[0] ?? null;
+    setPhotoFile(nextFile);
+
+    if (!nextFile) {
+      setPhotoPreviewUrl(editingMemberId ? members.find((member) => member.id === editingMemberId)?.photo_url ?? null : null);
+      return;
+    }
+
+    setPhotoPreviewUrl(URL.createObjectURL(nextFile));
   }
 
   function validateForm() {
@@ -273,12 +312,26 @@ function Members() {
     try {
       const payload = formToPayload(formState);
       if (editingMemberId) {
-        await updateMemberByAdmin(editingMemberId, payload);
+        let nextPhotoPath = selectedMember?.photo_url ?? null;
+        if (photoFile) {
+          nextPhotoPath = await uploadMemberPhoto(photoFile, editingMemberId, selectedMember?.photo_url ?? null);
+        }
+
+        await updateMemberByAdmin(editingMemberId, {
+          ...payload,
+          photo_url: nextPhotoPath,
+        });
       } else {
-        await createMemberByAdmin(payload);
+        const createdMemberId = await createMemberByAdmin(payload);
+        if (photoFile) {
+          const nextPhotoPath = await uploadMemberPhoto(photoFile, createdMemberId);
+          await updateMemberByAdmin(createdMemberId, { photo_url: nextPhotoPath });
+        }
       }
 
       setShowFormModal(false);
+      setPhotoFile(null);
+      setPhotoPreviewUrl(null);
       await loadMembers();
     } catch (saveError) {
       setFormError(saveError instanceof Error ? saveError.message : "Unable to save member.");
@@ -356,65 +409,60 @@ function Members() {
         filteredMembers.length === 0 ? (
           <EmptyState title="No members found" description="Try adjusting your filters or search query." />
         ) : (
-          <Card>
-            <DataTable
-              columns={
-                <tr>
-                  <th>Member</th>
-                  <th>Nickname</th>
-                  <th>Rank</th>
-                  <th>Status</th>
-                  <th>Birthday</th>
-                  <th>Age</th>
-                  <th>Location</th>
-                  <th>Date Joined</th>
-                  {isAdmin ? <th>Actions</th> : null}
-                </tr>
-              }
-            >
-              {filteredMembers.map((member) => (
-                <tr key={member.id}>
-                  <td>
-                    <button type="button" className="table-member-cell" onClick={() => void handleMemberClick(member.id)}>
-                      <Avatar name={member.full_name} src={member.photo_url} />
-                      <span>{member.full_name}</span>
-                    </button>
-                  </td>
-                  <td>
-                    {member.nickname?.trim() || "-"}
-                  </td>
-                  <td>
-                    <Badge tone={rankTone(member.member_rank)}>{rankLabel(member.member_rank)}</Badge>
-                  </td>
-                  <td>
-                    {member.archived_at ? (
-                      <Badge tone="danger">Archived</Badge>
-                    ) : (
-                      <Badge tone={member.active ? "success" : "default"}>{member.active ? "Active" : "Inactive"}</Badge>
-                    )}
-                  </td>
-                  <td>{formatDate(member.birth_date)}</td>
-                  <td>{getAgeFromBirthDate(member.birth_date) ?? "-"}</td>
-                  <td>{[member.city, member.state].filter(Boolean).join(", ") || "-"}</td>
-                  <td>{formatDate(member.date_joined)}</td>
-                  {isAdmin ? (
-                    <td>
-                      <div className="table-actions">
-                        <Button type="button" size="sm" variant="ghost" onClick={() => void openEditModal(member.id)}>
-                          Edit
-                        </Button>
-                        {!member.archived_at ? (
-                          <Button type="button" size="sm" variant="danger" onClick={() => setArchiveMemberId(member.id)}>
-                            Archive
-                          </Button>
-                        ) : null}
-                      </div>
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </DataTable>
-          </Card>
+          <div className="member-card-grid">
+            {filteredMembers.map((member) => (
+              <Card key={member.id} className="member-card">
+                <button type="button" className="member-card-top" onClick={() => void handleMemberClick(member.id)}>
+                  <Avatar name={member.full_name} src={memberPhotoUrls[member.id] ?? null} className="member-card-avatar" />
+                  <div className="member-card-heading">
+                    <h3>{member.full_name}</h3>
+                    <p>{member.nickname?.trim() || "No nickname"}</p>
+                  </div>
+                </button>
+
+                <div className="member-card-badges">
+                  <Badge tone={rankTone(member.member_rank)}>{rankLabel(member.member_rank)}</Badge>
+                  {member.archived_at ? (
+                    <Badge tone="danger">Archived</Badge>
+                  ) : (
+                    <Badge tone={member.active ? "success" : "default"}>{member.active ? "Active" : "Inactive"}</Badge>
+                  )}
+                </div>
+
+                <dl className="member-card-meta">
+                  <div>
+                    <dt>Birthday</dt>
+                    <dd>{formatDate(member.birth_date)}</dd>
+                  </div>
+                  <div>
+                    <dt>Age</dt>
+                    <dd>{getAgeFromBirthDate(member.birth_date) ?? "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>Location</dt>
+                    <dd>{[member.city, member.state].filter(Boolean).join(", ") || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>Date Joined</dt>
+                    <dd>{formatDate(member.date_joined)}</dd>
+                  </div>
+                </dl>
+
+                {isAdmin ? (
+                  <div className="member-card-actions">
+                    <Button type="button" size="sm" variant="ghost" onClick={() => void openEditModal(member.id)}>
+                      Edit
+                    </Button>
+                    {!member.archived_at ? (
+                      <Button type="button" size="sm" variant="danger" onClick={() => setArchiveMemberId(member.id)}>
+                        Archive
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </Card>
+            ))}
+          </div>
         )
       ) : null}
 
@@ -422,6 +470,9 @@ function Members() {
         <Card>
           <h2>Member Details</h2>
           <div className="details-grid">
+            <div className="member-detail-photo-wrap">
+              <Avatar name={selectedMember.full_name} src={selectedMemberPhotoUrl} className="member-detail-photo" />
+            </div>
             <p>
               <strong>Nickname:</strong> {selectedMember.nickname ?? "-"}
             </p>
@@ -621,14 +672,15 @@ function Members() {
             </div>
 
             <div>
-              <label className="field-label" htmlFor="photo_url">
-                Photo URL
+              <label className="field-label" htmlFor="member_photo">
+                Member Photo
               </label>
-              <Input
-                id="photo_url"
-                value={formState.photo_url}
-                onChange={(event) => updateForm("photo_url", event.target.value)}
-              />
+              <Input id="member_photo" type="file" accept="image/*" onChange={handlePhotoFileChange} />
+              {photoPreviewUrl ? (
+                <div className="member-photo-preview-wrap">
+                  <img className="member-photo-preview" src={photoPreviewUrl} alt="Member preview" />
+                </div>
+              ) : null}
             </div>
 
             <div>

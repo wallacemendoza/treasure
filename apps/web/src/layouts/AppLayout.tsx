@@ -31,7 +31,7 @@ function AppLayout() {
           <div className="brand-wrap">
             <img className="brand-logo" src={treasureLogo} alt="Treasure USA Chapter logo" />
             <div>
-              <p className="brand-title">TREASURE</p>
+              <p className="brand-title">PORTAL</p>
               <p className="brand-subtitle">USA CHAPTER</p>
             </div>
           </div>
@@ -71,7 +71,7 @@ function AppLayout() {
           </Button>
           <div className="mobile-brand">
             <img className="mobile-brand-logo" src={treasureLogo} alt="Balaios MC USA logo" />
-            <p className="mobile-title">TREASURE — BALAIOS MC USA</p>
+            <p className="mobile-title">PORTAL — BALAIOS MC USA</p>
           </div>
         </header>
 
@@ -79,9 +79,9 @@ function AppLayout() {
           <div className="topbar-brand">
             <div style={{ textAlign: "right" }}>
               <p className="topbar-title">
-                TREASURE<span> MC</span>
+                BALAIOS<span> MC</span>
               </p>
-              <p className="topbar-subtitle">Balaios MC USA · Chapter Portal</p>
+              <p className="topbar-subtitle">Balaios MC USA · Portal</p>
             </div>
             <img className="topbar-logo" src={treasureLogo} alt="Balaios MC USA logo" />
           </div>

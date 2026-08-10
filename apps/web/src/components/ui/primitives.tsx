@@ -32,7 +32,7 @@ export function Badge({
   return <span className={cn("badge", `badge-${tone}`)}>{children}</span>;
 }
 
-export function Avatar({ name, src }: { name: string; src?: string | null }) {
+export function Avatar({ name, src, className }: { name: string; src?: string | null; className?: string }) {
   const initials = name
     .split(" ")
     .filter(Boolean)
@@ -41,8 +41,8 @@ export function Avatar({ name, src }: { name: string; src?: string | null }) {
     .join("");
 
   if (src) {
-    return <img className="avatar" src={src} alt={name} />;
+    return <img className={cn("avatar", className)} src={src} alt={name} />;
   }
 
-  return <span className="avatar avatar-fallback">{initials || "?"}</span>;
+  return <span className={cn("avatar", "avatar-fallback", className)}>{initials || "?"}</span>;
 }

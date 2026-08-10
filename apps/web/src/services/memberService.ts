@@ -162,9 +162,9 @@ export async function getMemberByIdForAdmin(memberId: string): Promise<Member | 
   return data as Member | null;
 }
 
-export async function createMemberByAdmin(payload: MemberPayload): Promise<void> {
-  const { error } = await supabase.from("members").insert(payload);
-  if (!error) return;
+export async function createMemberByAdmin(payload: MemberPayload): Promise<string> {
+  const { data, error } = await supabase.from("members").insert(payload).select("id").single();
+  if (!error) return data.id as string;
 
   if (!isLegacyMemberColumnError(error.message)) {
     throw new Error(error.message);
@@ -175,8 +175,9 @@ export async function createMemberByAdmin(payload: MemberPayload): Promise<void>
   }
 
   const { birth_date: _birthDate, nickname: _nickname, ...legacyPayload } = payload;
-  const { error: legacyError } = await supabase.from("members").insert(legacyPayload);
+  const { data: legacyData, error: legacyError } = await supabase.from("members").insert(legacyPayload).select("id").single();
   if (legacyError) throw new Error(legacyError.message);
+  return legacyData.id as string;
 }
 
 export async function updateMemberByAdmin(memberId: string, payload: Partial<MemberPayload>): Promise<void> {
