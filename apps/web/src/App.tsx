@@ -1,30 +1,26 @@
-import { useEffect, useState } from 'react'
-import { supabase } from './lib/supabase'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import Login from './pages/Login/Login'
+import Dashboard from './pages/Dashboard/Dashboard'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
-  const [status, setStatus] = useState('Checking Supabase connection...')
-
-  useEffect(() => {
-    async function testConnection() {
-      const { error } = await supabase.rpc('member_directory')
-
-      if (error) {
-        setStatus(`Supabase connection failed: ${error.message}`)
-        return
-      }
-
-      setStatus('Supabase connection successful')
-    }
-
-    testConnection()
-  }, [])
-
   return (
-    <main>
-      <h1>Treasure</h1>
-      <p>Chapter management portal</p>
-      <p>{status}</p>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
