@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { Avatar, Button } from "../components/ui";
 import { cn } from "../utils/cn";
+import treasureLogo from "../assets/treasure-logo.png";
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard" },
@@ -24,15 +25,13 @@ function AppLayout() {
 
   return (
     <div className="app-shell">
-      <aside className={cn("sidebar", mobileOpen && "sidebar-open")}> 
+      <aside className={cn("sidebar", mobileOpen && "sidebar-open")}>
         <div className="sidebar-top">
           <div className="brand-wrap">
-            <span className="brand-mark" aria-hidden="true">
-              T
-            </span>
+            <img className="brand-logo" src={treasureLogo} alt="Treasure USA Chapter logo" />
             <div>
-              <p className="brand-title">Treasure</p>
-              <p className="brand-subtitle">Chapter Management</p>
+              <p className="brand-title">TREASURE</p>
+              <p className="brand-subtitle">USA CHAPTER</p>
             </div>
           </div>
 
@@ -69,7 +68,10 @@ function AppLayout() {
           <Button type="button" variant="secondary" onClick={() => setMobileOpen((prev) => !prev)}>
             {mobileOpen ? "Close" : "Menu"}
           </Button>
-          <p className="mobile-title">Treasure</p>
+          <div className="mobile-brand">
+            <img className="mobile-brand-logo" src={treasureLogo} alt="Treasure USA Chapter logo" />
+            <p className="mobile-title">TREASURE USA CHAPTER</p>
+          </div>
         </header>
 
         <main className="content-area">

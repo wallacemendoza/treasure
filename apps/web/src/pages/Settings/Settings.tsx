@@ -55,7 +55,7 @@ function Settings() {
 
   return (
     <div className="stack-xl">
-      <PageHeader title="Settings" subtitle="Account and access control" />
+      <PageHeader title="Settings" subtitle="Portal and access management" />
 
       <Card>
         <h2>My Account</h2>

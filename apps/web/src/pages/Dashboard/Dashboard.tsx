@@ -45,13 +45,13 @@ function Dashboard() {
     <div className="stack-xl">
       <PageHeader
         title="Dashboard"
-        subtitle="Live chapter overview from Supabase"
+        subtitle="Chapter overview and current activity"
       />
 
       <section className="stats-grid" aria-label="Dashboard counts">
         <StatCard title="Total Active Members" value={counts?.active_members ?? 0} accent="blue" />
-        <StatCard title="Full Patch" value={counts?.full_patch ?? 0} accent="green" />
-        <StatCard title="Prospects" value={counts?.prospects ?? 0} accent="orange" />
+        <StatCard title="Full Patch" value={counts?.full_patch ?? 0} accent="orange" />
+        <StatCard title="Prospects" value={counts?.prospects ?? 0} accent="blue" />
         <StatCard title="Support" value={counts?.support ?? 0} />
         <StatCard title="Currently Suspended" value={counts?.suspended ?? 0} accent="red" />
         <StatCard title="Currently On Leave" value={counts?.on_leave ?? 0} accent="orange" />

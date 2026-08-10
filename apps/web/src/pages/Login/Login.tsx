@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { Button, Card, Input } from "../../components/ui";
+import treasureLogo from "../../assets/treasure-logo.png";
 
 function Login() {
   const [identifier, setIdentifier] = useState("");
@@ -35,12 +36,11 @@ function Login() {
     <main className="login-screen">
       <Card className="login-card">
         <div className="login-brand">
-          <span className="brand-mark" aria-hidden="true">
-            T
-          </span>
+          <img className="login-logo" src={treasureLogo} alt="Treasure USA Chapter logo" />
           <div>
-            <h1>Treasure</h1>
-            <p>Chapter administration portal</p>
+            <h1>TREASURE</h1>
+            <p className="login-chapter">USA CHAPTER</p>
+            <p>Chapter Management Portal</p>
           </div>
         </div>
 

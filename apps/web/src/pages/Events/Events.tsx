@@ -190,7 +190,7 @@ function Events() {
     <div className="stack-xl">
       <PageHeader
         title="Events"
-        subtitle="Upcoming and historical chapter events"
+        subtitle="Chapter events and attendance"
         actions={
           isAdmin ? (
             <Button type="button" onClick={openAddModal}>
@@ -227,6 +227,7 @@ function Events() {
                 <tr>
                   <th>Event</th>
                   <th>Type</th>
+                  <th>Attendance</th>
                   <th>Status</th>
                   <th>When</th>
                   <th>Where</th>
@@ -244,7 +245,12 @@ function Events() {
                   </td>
                   <td>{eventRow.event_type ?? "-"}</td>
                   <td>
-                    <Badge tone={eventRow.status === "cancelled" ? "danger" : eventRow.status === "completed" ? "info" : "success"}>
+                    <Badge tone={eventRow.attendance_requirement === "required" ? "warning" : "info"}>
+                      {eventRow.attendance_requirement}
+                    </Badge>
+                  </td>
+                  <td>
+                    <Badge tone={eventRow.status === "cancelled" ? "danger" : eventRow.status === "completed" ? "success" : "info"}>
                       {eventRow.status}
                     </Badge>
                   </td>

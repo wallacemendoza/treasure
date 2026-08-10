@@ -77,9 +77,9 @@ function rankLabel(value: Member["member_rank"]) {
 }
 
 function rankTone(value: Member["member_rank"]) {
-  if (value === "full_patch") return "success" as const;
-  if (value === "prospect") return "warning" as const;
-  return "info" as const;
+  if (value === "full_patch") return "warning" as const;
+  if (value === "prospect") return "info" as const;
+  return "default" as const;
 }
 
 function toNullable(value: string) {
@@ -298,7 +298,7 @@ function Members() {
     <div className="stack-xl">
       <PageHeader
         title="Members"
-        subtitle="Secure roster directory and administration"
+        subtitle="Chapter roster and member management"
         actions={
           isAdmin ? (
             <Button type="button" onClick={openAddModal}>
@@ -373,7 +373,11 @@ function Members() {
                     <Badge tone={rankTone(member.member_rank)}>{rankLabel(member.member_rank)}</Badge>
                   </td>
                   <td>
-                    <Badge tone={member.active ? "success" : "warning"}>{member.active ? "Active" : "Inactive"}</Badge>
+                    {member.archived_at ? (
+                      <Badge tone="danger">Archived</Badge>
+                    ) : (
+                      <Badge tone={member.active ? "success" : "default"}>{member.active ? "Active" : "Inactive"}</Badge>
+                    )}
                   </td>
                   <td>{[member.city, member.state].filter(Boolean).join(", ") || "-"}</td>
                   <td>{formatDate(member.date_joined)}</td>

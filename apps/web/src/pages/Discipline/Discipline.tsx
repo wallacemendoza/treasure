@@ -53,6 +53,14 @@ function toneForStatus(status: MemberStatusRecord["status"]) {
   return "danger" as const;
 }
 
+function toneForType(type: MemberStatusRecord["type"]) {
+  if (type === "suspension") return "danger" as const;
+  if (type === "leave") return "info" as const;
+  if (type === "probation") return "warning" as const;
+  if (type === "temporary_restriction") return "warning" as const;
+  return "default" as const;
+}
+
 function Discipline() {
   const { role } = useAuth();
   const isAdmin = role === "admin";
@@ -148,7 +156,7 @@ function Discipline() {
     <div className="stack-xl">
       <PageHeader
         title="Discipline"
-        subtitle="Status records and discipline history"
+        subtitle="Suspensions, leave and member status"
         actions={
           isAdmin ? (
             <Button type="button" onClick={openAdd}>
@@ -182,7 +190,9 @@ function Discipline() {
               {records.map((record) => (
                 <tr key={record.id}>
                   <td>{record.member_id}</td>
-                  <td>{record.type.replace(/_/g, " ")}</td>
+                  <td>
+                    <Badge tone={toneForType(record.type)}>{record.type.replace(/_/g, " ")}</Badge>
+                  </td>
                   <td>
                     <Badge tone={toneForStatus(record.status)}>{record.status}</Badge>
                   </td>
