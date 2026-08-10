@@ -1,0 +1,37 @@
+# dependencies
+node_modules
+**/node_modules
+
+# env
+.env
+.env.local
+.env.*.local
+
+# web build output
+apps/web/dist
+apps/web/.vercel
+
+# shared package build output
+packages/shared/dist
+
+# mobile / Expo
+apps/mobile/.expo
+apps/mobile/.expo-shared
+apps/mobile/dist
+apps/mobile/web-build
+apps/mobile/*.jks
+apps/mobile/*.p8
+apps/mobile/*.p12
+apps/mobile/*.key
+apps/mobile/*.mobileprovision
+apps/mobile/*.orig.*
+
+# native build artifacts (if prebuild/eject is ever run)
+apps/mobile/ios
+apps/mobile/android
+
+# OS / editor
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json
