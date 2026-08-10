@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: "/members", label: "Members" },
   { to: "/events", label: "Events" },
   { to: "/discipline", label: "Discipline" },
+  { to: "/treasury", label: "Treasury" },
   { to: "/settings", label: "Settings" },
 ];
 
@@ -69,10 +70,22 @@ function AppLayout() {
             {mobileOpen ? "Close" : "Menu"}
           </Button>
           <div className="mobile-brand">
-            <img className="mobile-brand-logo" src={treasureLogo} alt="Treasure USA Chapter logo" />
-            <p className="mobile-title">TREASURE USA CHAPTER</p>
+            <img className="mobile-brand-logo" src={treasureLogo} alt="Balaios MC USA logo" />
+            <p className="mobile-title">TREASURE — BALAIOS MC USA</p>
           </div>
         </header>
+
+        <div className="topbar">
+          <div className="topbar-brand">
+            <div style={{ textAlign: "right" }}>
+              <p className="topbar-title">
+                TREASURE<span> MC</span>
+              </p>
+              <p className="topbar-subtitle">Balaios MC USA · Chapter Portal</p>
+            </div>
+            <img className="topbar-logo" src={treasureLogo} alt="Balaios MC USA logo" />
+          </div>
+        </div>
 
         <main className="content-area">
           <Outlet />

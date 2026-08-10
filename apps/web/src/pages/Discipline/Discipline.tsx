@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type { MemberStatusRecord } from "@treasure/shared";
 import {
@@ -16,6 +16,8 @@ import {
 } from "../../components/ui";
 import { useAuth } from "../../hooks/useAuth";
 import { createStatusRecordByAdmin, listStatusRecords, updateStatusRecordByAdmin } from "../../services/disciplineService";
+import { listMembersForAdmin } from "../../services/memberService";
+import type { MemberDirectoryRow } from "../../types/app";
 import { formatDate } from "../../utils/format";
 
 interface FormState {
@@ -66,6 +68,7 @@ function Discipline() {
   const isAdmin = role === "admin";
 
   const [records, setRecords] = useState<MemberStatusRecord[]>([]);
+  const [members, setMembers] = useState<MemberDirectoryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,18 +77,28 @@ function Discipline() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formState, setFormState] = useState<FormState>(EMPTY_FORM);
 
+  const memberNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const member of members) map.set(member.id, member.full_name);
+    return map;
+  }, [members]);
+
   const loadRecords = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await listStatusRecords();
+      const [data, memberRows] = await Promise.all([
+        listStatusRecords(),
+        isAdmin ? listMembersForAdmin(false) : Promise.resolve([] as MemberDirectoryRow[]),
+      ]);
       setRecords(data);
+      setMembers(memberRows);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load records.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     void loadRecords();
@@ -177,7 +190,7 @@ function Discipline() {
             <DataTable
               columns={
                 <tr>
-                  <th>Member ID</th>
+                  <th>Member</th>
                   <th>Type</th>
                   <th>Status</th>
                   <th>Start</th>
@@ -189,7 +202,7 @@ function Discipline() {
             >
               {records.map((record) => (
                 <tr key={record.id}>
-                  <td>{record.member_id}</td>
+                  <td>{memberNameById.get(record.member_id) ?? record.member_id}</td>
                   <td>
                     <Badge tone={toneForType(record.type)}>{record.type.replace(/_/g, " ")}</Badge>
                   </td>
@@ -222,14 +235,21 @@ function Discipline() {
           <div className="form-grid two-col">
             <div>
               <label className="field-label" htmlFor="member_id">
-                Member ID
+                Member
               </label>
-              <Input
+              <Select
                 id="member_id"
                 value={formState.member_id}
                 onChange={(event) => updateForm("member_id", event.target.value)}
                 required
-              />
+              >
+                <option value="">Select a member...</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.full_name}
+                  </option>
+                ))}
+              </Select>
             </div>
             <div>
               <label className="field-label" htmlFor="type">

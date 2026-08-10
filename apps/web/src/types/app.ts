@@ -20,6 +20,7 @@ export interface MemberDirectoryRow {
   photo_url: string | null;
   date_joined: string | null;
   archived_at: string | null;
+  prior_balance_due: number;
 }
 
 export interface DashboardState {

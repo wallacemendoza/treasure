@@ -6,3 +6,4 @@ export * from "./types/event";
 export * from "./types/memberStatus";
 export * from "./types/profile";
 export * from "./types/dashboard";
+export * from "./types/treasury";

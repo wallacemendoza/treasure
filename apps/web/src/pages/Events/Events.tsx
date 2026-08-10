@@ -78,6 +78,12 @@ function Events() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const [tab, setTab] = useState<"upcoming" | "past" | "all">("upcoming");
+  const [view, setView] = useState<"calendar" | "list">("calendar");
+  const [calendarCursor, setCalendarCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const loadEvents = useCallback(async () => {
     setIsLoading(true);
@@ -105,6 +111,32 @@ function Events() {
       return true;
     });
   }, [events, tab]);
+
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, Event[]>();
+    for (const evt of events) {
+      const key = new Date(evt.starts_at).toDateString();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(evt);
+    }
+    return map;
+  }, [events]);
+
+  const calendarDays = useMemo(() => {
+    const year = calendarCursor.getFullYear();
+    const month = calendarCursor.getMonth();
+    const firstOfMonth = new Date(year, month, 1);
+    const startOffset = firstOfMonth.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const cells: Array<{ date: Date | null }> = [];
+    for (let i = 0; i < startOffset; i += 1) cells.push({ date: null });
+    for (let day = 1; day <= daysInMonth; day += 1) cells.push({ date: new Date(year, month, day) });
+    while (cells.length % 7 !== 0) cells.push({ date: null });
+    return cells;
+  }, [calendarCursor]);
+
+  const selectedDayEvents = selectedDay ? (eventsByDate.get(selectedDay) ?? []) : [];
 
   function openAddModal() {
     setFormState(EMPTY_FORM);
@@ -201,23 +233,111 @@ function Events() {
       />
 
       <Card>
-        <div className="tab-row">
-          <Button type="button" variant={tab === "upcoming" ? "primary" : "secondary"} onClick={() => setTab("upcoming")}>
-            Upcoming
-          </Button>
-          <Button type="button" variant={tab === "past" ? "primary" : "secondary"} onClick={() => setTab("past")}>
-            Past
-          </Button>
-          <Button type="button" variant={tab === "all" ? "primary" : "secondary"} onClick={() => setTab("all")}>
-            All
-          </Button>
+        <div className="tab-row" style={{ justifyContent: "space-between" }}>
+          <div className="tab-row">
+            <Button type="button" variant={view === "calendar" ? "primary" : "secondary"} onClick={() => setView("calendar")}>
+              Calendar
+            </Button>
+            <Button type="button" variant={view === "list" ? "primary" : "secondary"} onClick={() => setView("list")}>
+              List
+            </Button>
+          </div>
+          {view === "list" ? (
+            <div className="tab-row">
+              <Button type="button" variant={tab === "upcoming" ? "primary" : "secondary"} onClick={() => setTab("upcoming")}>
+                Upcoming
+              </Button>
+              <Button type="button" variant={tab === "past" ? "primary" : "secondary"} onClick={() => setTab("past")}>
+                Past
+              </Button>
+              <Button type="button" variant={tab === "all" ? "primary" : "secondary"} onClick={() => setTab("all")}>
+                All
+              </Button>
+            </div>
+          ) : null}
         </div>
       </Card>
 
       {isLoading ? <LoadingSpinner label="Loading events..." /> : null}
       {!isLoading && error ? <ErrorState message={error} onRetry={() => void loadEvents()} /> : null}
 
-      {!isLoading && !error ? (
+      {!isLoading && !error && view === "calendar" ? (
+        <Card>
+          <div className="calendar-nav">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setCalendarCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+            >
+              &larr; Prev
+            </Button>
+            <h2>{calendarCursor.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h2>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setCalendarCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+            >
+              Next &rarr;
+            </Button>
+          </div>
+
+          <div className="calendar-grid">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+              <div key={day} className="calendar-day-header">
+                {day}
+              </div>
+            ))}
+            {calendarDays.map((cell, idx) => {
+              if (!cell.date) return <div key={idx} className="calendar-day calendar-day-empty" />;
+              const key = cell.date.toDateString();
+              const dayEvents = eventsByDate.get(key) ?? [];
+              const isToday = key === new Date().toDateString();
+              return (
+                <button
+                  type="button"
+                  key={idx}
+                  className={`calendar-day${isToday ? " calendar-day-today" : ""}${selectedDay === key ? " calendar-day-selected" : ""}`}
+                  onClick={() => setSelectedDay(key)}
+                >
+                  <span className="calendar-day-number">{cell.date.getDate()}</span>
+                  {dayEvents.length > 0 ? (
+                    <span className="calendar-event-dots">
+                      {dayEvents.slice(0, 3).map((evt) => (
+                        <span key={evt.id} className="calendar-event-dot" title={evt.event_name} />
+                      ))}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedDay ? (
+            <div className="calendar-selected-events">
+              <h2>{new Date(selectedDay).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</h2>
+              {selectedDayEvents.length === 0 ? (
+                <p className="table-subtext">No events on this day.</p>
+              ) : (
+                selectedDayEvents.map((evt) => (
+                  <div key={evt.id} className="calendar-selected-event-row">
+                    <div>
+                      <strong>{evt.event_name}</strong>
+                      {evt.location ? <p className="table-subtext">{evt.location}</p> : null}
+                    </div>
+                    <Badge tone={evt.status === "cancelled" ? "danger" : evt.status === "completed" ? "success" : "info"}>
+                      {evt.status}
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {!isLoading && !error && view === "list" ? (
         filteredEvents.length === 0 ? (
           <EmptyState title="No events" description="There are no events for the selected filter." />
         ) : (

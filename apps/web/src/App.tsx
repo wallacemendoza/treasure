@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import Members from "./pages/Members/Members";
 import Events from "./pages/Events/Events";
 import Discipline from "./pages/Discipline/Discipline";
+import Treasury from "./pages/Treasury/Treasury";
 import Settings from "./pages/Settings/Settings";
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
             <Route path="/members" element={<Members />} />
             <Route path="/events" element={<Events />} />
             <Route path="/discipline" element={<Discipline />} />
+            <Route path="/treasury" element={<Treasury />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
 

@@ -32,7 +32,7 @@ export async function listMembersDirectory(): Promise<MemberDirectoryRow[]> {
 export async function listMembersForAdmin(includeArchived: boolean): Promise<MemberDirectoryRow[]> {
   let query = supabase
     .from("members")
-    .select("id, full_name, member_rank, active, city, state, photo_url, date_joined, archived_at")
+    .select("id, full_name, member_rank, active, city, state, photo_url, date_joined, archived_at, prior_balance_due")
     .order("full_name", { ascending: true });
 
   if (!includeArchived) {

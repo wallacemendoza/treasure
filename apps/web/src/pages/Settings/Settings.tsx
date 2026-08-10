@@ -1,8 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import type { Profile } from "@treasure/shared";
-import { Badge, Button, Card, DataTable, EmptyState, ErrorState, Input, LoadingSpinner, PageHeader, Select } from "../../components/ui";
+import { Badge, Button, Card, DataTable, EmptyState, ErrorState, Input, LoadingSpinner, Modal, PageHeader, Select } from "../../components/ui";
 import { useAuth } from "../../hooks/useAuth";
 import { listProfilesForAdmin, updateProfileAccessByAdmin } from "../../services/profileService";
+import { createUserByAdmin } from "../../services/adminUserService";
+
+interface NewUserForm {
+  username: string;
+  email: string;
+  password: string;
+  access_role: Profile["access_role"];
+}
+
+const EMPTY_NEW_USER: NewUserForm = {
+  username: "",
+  email: "",
+  password: "",
+  access_role: "viewer",
+};
 
 function Settings() {
   const { profile, role, refreshProfile } = useAuth();
@@ -12,6 +28,11 @@ function Settings() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newUser, setNewUser] = useState<NewUserForm>(EMPTY_NEW_USER);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   const loadProfiles = useCallback(async () => {
     if (!isAdmin) return;
@@ -53,6 +74,37 @@ function Settings() {
     }
   }
 
+  function updateNewUser<K extends keyof NewUserForm>(key: K, value: NewUserForm[K]) {
+    setNewUser((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function openCreateModal() {
+    setNewUser(EMPTY_NEW_USER);
+    setCreateError(null);
+    setShowCreateModal(true);
+  }
+
+  async function submitCreateUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreateError(null);
+
+    if (newUser.password.length < 8) {
+      setCreateError("Password must be at least 8 characters.");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      await createUserByAdmin(newUser);
+      setShowCreateModal(false);
+      await loadProfiles();
+    } catch (createErr) {
+      setCreateError(createErr instanceof Error ? createErr.message : "Unable to create user.");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
   return (
     <div className="stack-xl">
       <PageHeader title="Settings" subtitle="Portal and access management" />
@@ -79,7 +131,12 @@ function Settings() {
 
       {isAdmin ? (
         <Card>
-          <h2>Administrative Access</h2>
+          <div className="page-header" style={{ marginBottom: "var(--space-4)" }}>
+            <h2>Administrative Access</h2>
+            <Button type="button" onClick={openCreateModal}>
+              + Create User
+            </Button>
+          </div>
           {isLoading ? <LoadingSpinner label="Loading profiles..." /> : null}
           {!isLoading && error ? <ErrorState message={error} onRetry={() => void loadProfiles()} /> : null}
 
@@ -145,6 +202,78 @@ function Settings() {
           ) : null}
         </Card>
       ) : null}
+
+      <Modal open={showCreateModal} title="Create User" onClose={() => setShowCreateModal(false)}>
+        <form className="stack-md" onSubmit={submitCreateUser}>
+          <div>
+            <label className="field-label" htmlFor="new_username">
+              Username
+            </label>
+            <Input
+              id="new_username"
+              value={newUser.username}
+              onChange={(event) => updateNewUser("username", event.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="field-label" htmlFor="new_email">
+              Email
+            </label>
+            <Input
+              id="new_email"
+              type="email"
+              value={newUser.email}
+              onChange={(event) => updateNewUser("email", event.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="field-label" htmlFor="new_password">
+              Temporary Password
+            </label>
+            <Input
+              id="new_password"
+              type="text"
+              value={newUser.password}
+              onChange={(event) => updateNewUser("password", event.target.value)}
+              placeholder="At least 8 characters"
+              required
+            />
+            <p className="table-subtext" style={{ marginTop: "var(--space-1)" }}>
+              Share this with the member directly — it isn't emailed automatically. They can sign in with
+              either this username or their email.
+            </p>
+          </div>
+
+          <div>
+            <label className="field-label" htmlFor="new_access_role">
+              Access Role
+            </label>
+            <Select
+              id="new_access_role"
+              value={newUser.access_role}
+              onChange={(event) => updateNewUser("access_role", event.target.value as Profile["access_role"])}
+            >
+              <option value="viewer">Viewer</option>
+              <option value="admin">Admin</option>
+            </Select>
+          </div>
+
+          {createError ? <p className="form-error">{createError}</p> : null}
+
+          <div className="modal-footer">
+            <Button type="button" variant="secondary" onClick={() => setShowCreateModal(false)} disabled={isCreating}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isCreating}>
+              {isCreating ? "Creating..." : "Create User"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -1,32 +1,37 @@
-﻿@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap");
 
 :root {
-  --bg-primary: #0a0908;
-  --bg-surface: #161210;
-  --bg-surface-alt: #1d1712;
-  --bg-hover: #241a17;
+  /* Balaios MC USA palette — matched to the club's treasury ledger:
+     near-black ground, crimson accents, brass/gold headers, olive
+     for "optional" states. Kept the same variable NAMES as before
+     (--blue is now the crimson accent) so every component that
+     references var(--blue) etc. re-skins automatically. */
+  --bg-primary: #060504;
+  --bg-surface: #14100d;
+  --bg-surface-alt: #1a1310;
+  --bg-hover: #241a15;
 
-  --border: #2b241c;
+  --border: #2e2116;
 
-  --text-primary: #e2e8f0;
-  --text-strong: #f1f5f9;
-  --text-muted: #94a3b8;
-  --text-subtle: #64748b;
+  --text-primary: #ece4d3;
+  --text-strong: #f7f1e3;
+  --text-muted: #b9ac93;
+  --text-subtle: #7d7160;
 
-  --blue: #2563eb;
-  --blue-dark: #1d4ed8;
+  --blue: #b91c1c;
+  --blue-dark: #7f1414;
 
-  --gold: #f59e0b;
-  --gold-bright: #fbbf24;
-  --gold-light: #fde68a;
+  --gold: #c9a227;
+  --gold-bright: #e8c65a;
+  --gold-light: #f3e3ad;
 
-  --success: #4ade80;
-  --success-bg: #14532d;
+  --success: #7a9c3f;
+  --success-bg: #1c2412;
 
-  --danger: #f87171;
-  --danger-bg: #7f1d1d;
+  --danger: #e0483f;
+  --danger-bg: #3a1210;
 
-  --warning-bg: #3b2f00;
+  --warning-bg: #362708;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -40,10 +45,10 @@
   --space-6: 24px;
   --space-8: 32px;
 
-  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0 10px 36px rgba(0, 0, 0, 0.55);
 
   color: var(--text-primary);
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Oswald", "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -77,16 +82,18 @@ p {
 }
 
 h1 {
-  font-size: 1.72rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-family: "Bebas Neue", "Oswald", sans-serif;
+  font-size: 2.1rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
   color: var(--text-strong);
 }
 
 h2 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-family: "Bebas Neue", "Oswald", sans-serif;
+  font-size: 1.3rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-strong);
 }
@@ -162,10 +169,11 @@ a {
 }
 
 .brand-title {
+  font-family: "Bebas Neue", "Oswald", sans-serif;
   color: var(--text-strong);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  font-size: 1.1rem;
 }
 
 .brand-subtitle {
@@ -263,11 +271,64 @@ a {
 }
 
 .card {
-  background: var(--bg-surface);
+  position: relative;
+  background: linear-gradient(180deg, var(--bg-surface) 0%, #100d0b 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   box-shadow: var(--shadow-elevated);
+  overflow: hidden;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--blue), var(--gold));
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-8) 0;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.topbar-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--gold);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.topbar-title {
+  font-family: "Bebas Neue", "Oswald", sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: 0.14em;
+  color: var(--text-strong);
+  line-height: 1;
+}
+
+.topbar-title span {
+  color: var(--blue);
+}
+
+.topbar-subtitle {
+  font-family: "Courier Prime", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold-light);
 }
 
 .btn {
@@ -358,8 +419,8 @@ a {
 .select:focus,
 .textarea:focus {
   outline: none;
-  border-color: rgba(37, 99, 235, 0.8);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+  border-color: rgba(185, 28, 28, 0.8);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.2);
 }
 
 .textarea {
@@ -679,6 +740,110 @@ a {
   border-bottom: 1px solid var(--border);
 }
 
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.calendar-nav h2 {
+  margin: 0;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.calendar-day-header {
+  text-align: center;
+  font-family: "Courier Prime", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 6px 0;
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  aspect-ratio: 1 / 1;
+  min-height: 52px;
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 6px 4px;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.calendar-day:hover {
+  border-color: var(--gold);
+}
+
+.calendar-day-empty {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+.calendar-day-number {
+  font-family: "Courier Prime", monospace;
+  font-size: 0.82rem;
+}
+
+.calendar-day-today {
+  border-color: var(--gold-bright);
+}
+
+.calendar-day-today .calendar-day-number {
+  color: var(--gold-bright);
+  font-weight: 700;
+}
+
+.calendar-day-selected {
+  background: rgba(185, 28, 28, 0.18);
+  border-color: var(--blue);
+}
+
+.calendar-event-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.calendar-event-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
+.calendar-selected-events {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.calendar-selected-event-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
 .login-screen {
   min-height: 100vh;
   display: grid;
@@ -779,6 +944,10 @@ a {
 
   .content-area {
     padding: var(--space-6) var(--space-4);
+  }
+
+  .topbar {
+    display: none;
   }
 
   .stats-grid {

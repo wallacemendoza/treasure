@@ -28,6 +28,8 @@ export interface Member {
   date_joined: string | null;
   notes: string | null;
 
+  prior_balance_due: number;
+
   created_at: string;
   updated_at: string;
 }
