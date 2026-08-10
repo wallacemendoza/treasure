@@ -68,6 +68,7 @@ create table if not exists public.members (
   archived_at timestamptz,
   birth_date date,
   date_joined date,
+  full_patch_since date,
   motorcycle_brand text,
   motorcycle_model text,
   motorcycle_color text,
@@ -374,6 +375,7 @@ returns table (
   photo_url text,
   birth_date date,
   date_joined date,
+  full_patch_since date,
   prior_balance_due numeric,
   motorcycle_brand text,
   motorcycle_model text,
@@ -386,7 +388,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select id, full_name, nickname, member_rank, active, city, state, photo_url, birth_date, date_joined, prior_balance_due, motorcycle_brand, motorcycle_model, motorcycle_color, motorcycle_year, motorcycle_plate
+  select id, full_name, nickname, member_rank, active, city, state, photo_url, birth_date, date_joined, full_patch_since, prior_balance_due, motorcycle_brand, motorcycle_model, motorcycle_color, motorcycle_year, motorcycle_plate
   from public.members
   where archived_at is null;
 $$;

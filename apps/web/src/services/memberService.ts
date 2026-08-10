@@ -6,6 +6,7 @@ function isLegacyMemberColumnError(message: string) {
   const normalized = message.toLowerCase();
   return (
     normalized.includes("members.birth_date") ||
+    normalized.includes("members.full_patch_since") ||
     normalized.includes("members.nickname") ||
     normalized.includes("members.motorcycle_brand") ||
     normalized.includes("members.motorcycle_model") ||
@@ -15,6 +16,8 @@ function isLegacyMemberColumnError(message: string) {
     normalized.includes("members.prior_balance_due") ||
     normalized.includes("'birth_date' column of 'members'") ||
     normalized.includes('"birth_date" column of "members"') ||
+    normalized.includes("'full_patch_since' column of 'members'") ||
+    normalized.includes('"full_patch_since" column of "members"') ||
     normalized.includes("'nickname' column of 'members'") ||
     normalized.includes('"nickname" column of "members"') ||
     normalized.includes("'motorcycle_brand' column of 'members'") ||
@@ -36,6 +39,7 @@ function hasUnsupportedLegacyFieldValues(payload: Partial<MemberPayload>) {
   return Boolean(
     payload.nickname?.trim() ||
       payload.birth_date ||
+    payload.full_patch_since ||
       payload.motorcycle_brand?.trim() ||
       payload.motorcycle_model?.trim() ||
       payload.motorcycle_color?.trim() ||
@@ -46,14 +50,14 @@ function hasUnsupportedLegacyFieldValues(payload: Partial<MemberPayload>) {
 
 function getLegacySchemaSaveError() {
   return new Error(
-    "Nickname, birthday, and motorcycle fields cannot be saved yet because your live Supabase members table is missing those columns. Apply the latest members SQL migration first.",
+    "Nickname, birthday, full patch date, and motorcycle fields cannot be saved yet because your live Supabase members table is missing those columns. Apply the latest members SQL migration first.",
   );
 }
 
 function mapLegacyDirectoryRow(
   row: Omit<
     MemberDirectoryRow,
-    "nickname" | "birth_date" | "prior_balance_due" | "archived_at" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
+    "nickname" | "birth_date" | "full_patch_since" | "prior_balance_due" | "archived_at" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
   > & {
     archived_at?: string | null;
   },
@@ -62,6 +66,7 @@ function mapLegacyDirectoryRow(
     ...row,
     nickname: null,
     birth_date: null,
+    full_patch_since: null,
     prior_balance_due: 0,
     motorcycle_brand: null,
     motorcycle_model: null,
@@ -75,13 +80,14 @@ function mapLegacyDirectoryRow(
 function mapLegacyMember(
   member: Omit<
     Member,
-    "nickname" | "birth_date" | "prior_balance_due" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
+    "nickname" | "birth_date" | "full_patch_since" | "prior_balance_due" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
   >,
 ): Member {
   return {
     ...member,
     nickname: null,
     birth_date: null,
+    full_patch_since: null,
     prior_balance_due: 0,
     motorcycle_brand: null,
     motorcycle_model: null,
@@ -109,6 +115,7 @@ export interface MemberPayload {
   active: boolean;
   birth_date: string | null;
   date_joined: string | null;
+  full_patch_since: string | null;
   motorcycle_brand: string | null;
   motorcycle_model: string | null;
   motorcycle_color: string | null;
@@ -136,7 +143,7 @@ export async function listMembersDirectory(): Promise<MemberDirectoryRow[]> {
       mapLegacyDirectoryRow(
         row as Omit<
           MemberDirectoryRow,
-          "nickname" | "birth_date" | "prior_balance_due" | "archived_at" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
+          "nickname" | "birth_date" | "full_patch_since" | "prior_balance_due" | "archived_at" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
         >,
       ),
     );
@@ -147,6 +154,7 @@ export async function listMembersDirectory(): Promise<MemberDirectoryRow[]> {
     ...row,
     nickname: row.nickname ?? null,
     birth_date: row.birth_date ?? null,
+    full_patch_since: row.full_patch_since ?? null,
     prior_balance_due: row.prior_balance_due ?? 0,
     motorcycle_brand: row.motorcycle_brand ?? null,
     motorcycle_model: row.motorcycle_model ?? null,
@@ -160,7 +168,7 @@ export async function listMembersDirectory(): Promise<MemberDirectoryRow[]> {
 export async function listMembersForAdmin(includeArchived: boolean): Promise<MemberDirectoryRow[]> {
   let query = supabase
     .from("members")
-    .select("id, full_name, nickname, member_rank, active, city, state, photo_url, birth_date, date_joined, archived_at, prior_balance_due, motorcycle_brand, motorcycle_model, motorcycle_color, motorcycle_year, motorcycle_plate")
+    .select("id, full_name, nickname, member_rank, active, city, state, photo_url, birth_date, date_joined, full_patch_since, archived_at, prior_balance_due, motorcycle_brand, motorcycle_model, motorcycle_color, motorcycle_year, motorcycle_plate")
     .order("full_name", { ascending: true });
 
   if (!includeArchived) {
@@ -189,7 +197,7 @@ export async function listMembersForAdmin(includeArchived: boolean): Promise<Mem
       mapLegacyDirectoryRow(
         row as Omit<
           MemberDirectoryRow,
-          "nickname" | "birth_date" | "prior_balance_due" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
+          "nickname" | "birth_date" | "full_patch_since" | "prior_balance_due" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
         > & { archived_at?: string | null },
       ),
     );
@@ -221,7 +229,7 @@ export async function getMemberByIdForAdmin(memberId: string): Promise<Member | 
       ? mapLegacyMember(
           legacyData as Omit<
             Member,
-            "nickname" | "birth_date" | "prior_balance_due" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
+            "nickname" | "birth_date" | "full_patch_since" | "prior_balance_due" | "motorcycle_brand" | "motorcycle_model" | "motorcycle_color" | "motorcycle_year" | "motorcycle_plate"
           >,
         )
       : null;
@@ -244,6 +252,7 @@ export async function createMemberByAdmin(payload: MemberPayload): Promise<strin
 
   const {
     birth_date: _birthDate,
+    full_patch_since: _fullPatchSince,
     nickname: _nickname,
     motorcycle_brand: _motorcycleBrand,
     motorcycle_model: _motorcycleModel,
@@ -271,6 +280,7 @@ export async function updateMemberByAdmin(memberId: string, payload: Partial<Mem
 
   const {
     birth_date: _birthDate,
+    full_patch_since: _fullPatchSince,
     nickname: _nickname,
     motorcycle_brand: _motorcycleBrand,
     motorcycle_model: _motorcycleModel,

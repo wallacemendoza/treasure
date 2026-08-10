@@ -28,6 +28,7 @@ export interface Member {
 
   birth_date: string | null;
   date_joined: string | null;
+  full_patch_since: string | null;
   notes: string | null;
 
   motorcycle_brand: string | null;

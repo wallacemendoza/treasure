@@ -3,7 +3,6 @@ import type { ChangeEvent, FormEvent } from "react";
 import type { Member } from "@treasure/shared";
 import {
   Avatar,
-  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -27,7 +26,7 @@ import {
 } from "../../services/memberService";
 import { resolveMemberPhotoUrl, uploadMemberPhoto } from "../../services/storageService";
 import type { MemberDirectoryRow } from "../../types/app";
-import { cleanPhoneInput, formatDate, formatPhone, getAgeFromBirthDate } from "../../utils/format";
+import { cleanPhoneInput, formatDate, formatPhone, getAgeFromBirthDate, getYearsSinceDate } from "../../utils/format";
 
 const RANK_OPTIONS: Member["member_rank"][] = ["support", "prospect", "full_patch"];
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -49,6 +48,7 @@ interface FormState {
   active: boolean;
   birth_date: string;
   date_joined: string;
+  full_patch_since: string;
   motorcycle_brand: string;
   motorcycle_model: string;
   motorcycle_color: string;
@@ -74,6 +74,7 @@ const EMPTY_FORM: FormState = {
   active: true,
   birth_date: "",
   date_joined: "",
+  full_patch_since: "",
   motorcycle_brand: "",
   motorcycle_model: "",
   motorcycle_color: "",
@@ -86,12 +87,6 @@ function rankLabel(value: Member["member_rank"]) {
   if (value === "full_patch") return "Full Patch";
   if (value === "prospect") return "Prospect";
   return "Support";
-}
-
-function rankTone(value: Member["member_rank"]) {
-  if (value === "full_patch") return "warning" as const;
-  if (value === "prospect") return "info" as const;
-  return "default" as const;
 }
 
 function toNullable(value: string) {
@@ -124,6 +119,7 @@ function mapMemberToForm(member: Member): FormState {
     active: member.active,
     birth_date: member.birth_date ?? "",
     date_joined: member.date_joined ?? "",
+    full_patch_since: member.full_patch_since ?? "",
     motorcycle_brand: member.motorcycle_brand ?? "",
     motorcycle_model: member.motorcycle_model ?? "",
     motorcycle_color: member.motorcycle_color ?? "",
@@ -152,6 +148,7 @@ function formToPayload(form: FormState): MemberPayload {
     active: form.active,
     birth_date: toNullable(form.birth_date),
     date_joined: toNullable(form.date_joined),
+    full_patch_since: toNullable(form.full_patch_since),
     motorcycle_brand: toNullable(form.motorcycle_brand),
     motorcycle_model: toNullable(form.motorcycle_model),
     motorcycle_color: toNullable(form.motorcycle_color),
@@ -444,10 +441,9 @@ function Members() {
               <Card key={member.id} className="member-card">
                 <div className="member-card-header">
                   <button type="button" className="member-card-top" onClick={() => void handleMemberClick(member.id)}>
-                    <Avatar name={member.full_name} src={memberPhotoUrls[member.id] ?? null} className="member-card-avatar" />
                     <div className="member-card-heading">
-                      <h3>{member.full_name}</h3>
-                      <p>{member.nickname?.trim() || "No nickname"}</p>
+                      <p className="member-card-nickname">{member.nickname?.trim() || "No nickname"}</p>
+                      <p className="member-card-name">{member.full_name}</p>
                     </div>
                   </button>
 
@@ -466,51 +462,25 @@ function Members() {
                 </div>
 
                 <button type="button" className="member-card-body-button" onClick={() => void handleMemberClick(member.id)}>
-                  <div className="member-card-badges">
-                    <Badge tone={rankTone(member.member_rank)}>{rankLabel(member.member_rank)}</Badge>
-                    {member.archived_at ? (
-                      <Badge tone="danger">Archived</Badge>
-                    ) : (
-                      <Badge tone={member.active ? "success" : "default"}>{member.active ? "Active" : "Inactive"}</Badge>
-                    )}
-                  </div>
-
                   <dl className="member-card-meta">
-                    <div>
-                      <dt>Birthday</dt>
-                      <dd>{formatDate(member.birth_date)}</dd>
-                    </div>
                     <div>
                       <dt>Age</dt>
                       <dd>{getAgeFromBirthDate(member.birth_date) ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Location</dt>
-                      <dd>{[member.city, member.state].filter(Boolean).join(", ") || "-"}</dd>
                     </div>
                     <div>
                       <dt>Date Joined</dt>
                       <dd>{formatDate(member.date_joined)}</dd>
                     </div>
                     <div>
-                      <dt>Bike Brand</dt>
-                      <dd>{member.motorcycle_brand ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Bike Model</dt>
-                      <dd>{member.motorcycle_model ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Bike Color</dt>
-                      <dd>{member.motorcycle_color ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Bike Year</dt>
-                      <dd>{member.motorcycle_year ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>Plate</dt>
-                      <dd>{member.motorcycle_plate ?? "-"}</dd>
+                      <dt>Years Full Patch</dt>
+                      <dd>
+                        {member.member_rank === "full_patch"
+                          ? (() => {
+                              const years = getYearsSinceDate(member.full_patch_since);
+                              return years === null ? "-" : `${years} ${years === 1 ? "yr" : "yrs"}`;
+                            })()
+                          : "-"}
+                      </dd>
                     </div>
                   </dl>
                 </button>
@@ -544,6 +514,18 @@ function Members() {
             </p>
             <p>
               <strong>Age:</strong> {getAgeFromBirthDate(selectedMember.birth_date) ?? "-"}
+            </p>
+            <p>
+              <strong>Full Patch Since:</strong> {formatDate(selectedMember.full_patch_since)}
+            </p>
+            <p>
+              <strong>Years Full Patch:</strong>{" "}
+              {selectedMember.member_rank === "full_patch"
+                ? (() => {
+                    const years = getYearsSinceDate(selectedMember.full_patch_since);
+                    return years === null ? "-" : `${years} ${years === 1 ? "yr" : "yrs"}`;
+                  })()
+                : "-"}
             </p>
             <p>
               <strong>Address:</strong>{" "}
@@ -676,6 +658,18 @@ function Members() {
                 type="date"
                 value={formState.date_joined}
                 onChange={(event) => updateForm("date_joined", event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="full_patch_since">
+                Full Patch Since
+              </label>
+              <Input
+                id="full_patch_since"
+                type="date"
+                value={formState.full_patch_since}
+                onChange={(event) => updateForm("full_patch_since", event.target.value)}
               />
             </div>
 

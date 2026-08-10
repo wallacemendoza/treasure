@@ -36,6 +36,23 @@ export function getAgeFromBirthDate(value: string | null | undefined) {
   return age >= 0 ? age : null;
 }
 
+export function getYearsSinceDate(value: string | null | undefined) {
+  if (!value) return null;
+
+  const startDate = new Date(value);
+  if (Number.isNaN(startDate.getTime())) return null;
+
+  const today = new Date();
+  let years = today.getFullYear() - startDate.getFullYear();
+  const monthDifference = today.getMonth() - startDate.getMonth();
+
+  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < startDate.getDate())) {
+    years -= 1;
+  }
+
+  return years >= 0 ? years : null;
+}
+
 export function formatDateTime(value: string | null | undefined) {
   if (!value) return "-";
   const date = new Date(value);

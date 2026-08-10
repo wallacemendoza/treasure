@@ -21,6 +21,7 @@ export interface MemberDirectoryRow {
   photo_url: string | null;
   birth_date: string | null;
   date_joined: string | null;
+  full_patch_since: string | null;
   archived_at: string | null;
   motorcycle_brand: string | null;
   motorcycle_model: string | null;

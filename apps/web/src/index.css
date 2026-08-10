@@ -639,15 +639,15 @@ a {
 
 .member-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 320px));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 300px));
   justify-content: start;
   gap: var(--space-4);
 }
 
 .member-card {
-  width: 320px;
-  min-height: 320px;
-  aspect-ratio: 1 / 1;
+  width: 300px;
+  min-height: 228px;
+  aspect-ratio: auto;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -662,7 +662,7 @@ a {
 
 .member-card-top {
   display: grid;
-  gap: var(--space-3);
+  gap: 2px;
   justify-items: start;
   border: none;
   padding: 0;
@@ -683,37 +683,28 @@ a {
   cursor: pointer;
 }
 
-.member-card-avatar {
-  width: 88px;
-  height: 88px;
-  border-radius: 20px;
-  object-fit: cover;
-}
-
-.member-card-heading h3 {
+.member-card-nickname {
   margin: 0;
   font-family: "Bebas Neue", "Oswald", sans-serif;
-  font-size: 1.5rem;
-  letter-spacing: 0.04em;
+  font-size: 2rem;
+  letter-spacing: 0.05em;
+  line-height: 1;
   color: var(--text-strong);
 }
 
-.member-card-heading p {
-  margin-top: 4px;
-}
-
-.member-card-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
+.member-card-name {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .member-card-meta {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
-  margin: var(--space-4) 0;
+  margin: var(--space-4) 0 0;
 }
 
 .member-card-meta dt {
@@ -1111,7 +1102,7 @@ a {
 
   .member-card {
     width: 280px;
-    min-height: 280px;
+    min-height: 214px;
   }
 }
 
