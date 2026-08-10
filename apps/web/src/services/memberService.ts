@@ -7,7 +7,13 @@ function isLegacyMemberColumnError(message: string) {
   return (
     normalized.includes("members.birth_date") ||
     normalized.includes("members.nickname") ||
-    normalized.includes("members.prior_balance_due")
+    normalized.includes("members.prior_balance_due") ||
+    normalized.includes("'birth_date' column of 'members'") ||
+    normalized.includes('"birth_date" column of "members"') ||
+    normalized.includes("'nickname' column of 'members'") ||
+    normalized.includes('"nickname" column of "members"') ||
+    normalized.includes("'prior_balance_due' column of 'members'") ||
+    normalized.includes('"prior_balance_due" column of "members"')
   );
 }
 
