@@ -30,6 +30,12 @@ export interface Member {
   date_joined: string | null;
   notes: string | null;
 
+  motorcycle_brand: string | null;
+  motorcycle_model: string | null;
+  motorcycle_color: string | null;
+  motorcycle_year: number | null;
+  motorcycle_plate: string | null;
+
   prior_balance_due: number;
 
   created_at: string;

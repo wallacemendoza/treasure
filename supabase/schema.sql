@@ -68,6 +68,12 @@ create table if not exists public.members (
   archived_at timestamptz,
   birth_date date,
   date_joined date,
+  motorcycle_brand text,
+  motorcycle_model text,
+  motorcycle_color text,
+  motorcycle_year int,
+  motorcycle_plate text,
+  prior_balance_due numeric(10, 2) not null default 0,
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -360,19 +366,27 @@ create or replace function public.member_directory()
 returns table (
   id uuid,
   full_name text,
+  nickname text,
   member_rank text,
   active boolean,
   city text,
   state text,
   photo_url text,
-  date_joined date
+  birth_date date,
+  date_joined date,
+  prior_balance_due numeric,
+  motorcycle_brand text,
+  motorcycle_model text,
+  motorcycle_color text,
+  motorcycle_year int,
+  motorcycle_plate text
 )
 language sql
 stable
 security definer
 set search_path = public
 as $$
-  select id, full_name, member_rank, active, city, state, photo_url, date_joined
+  select id, full_name, nickname, member_rank, active, city, state, photo_url, birth_date, date_joined, prior_balance_due, motorcycle_brand, motorcycle_model, motorcycle_color, motorcycle_year, motorcycle_plate
   from public.members
   where archived_at is null;
 $$;

@@ -49,6 +49,11 @@ interface FormState {
   active: boolean;
   birth_date: string;
   date_joined: string;
+  motorcycle_brand: string;
+  motorcycle_model: string;
+  motorcycle_color: string;
+  motorcycle_year: string;
+  motorcycle_plate: string;
   notes: string;
 }
 
@@ -69,6 +74,11 @@ const EMPTY_FORM: FormState = {
   active: true,
   birth_date: "",
   date_joined: "",
+  motorcycle_brand: "",
+  motorcycle_model: "",
+  motorcycle_color: "",
+  motorcycle_year: "",
+  motorcycle_plate: "",
   notes: "",
 };
 
@@ -89,6 +99,13 @@ function toNullable(value: string) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function toNullableInt(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number.parseInt(trimmed, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
 function mapMemberToForm(member: Member): FormState {
   return {
     full_name: member.full_name,
@@ -107,6 +124,11 @@ function mapMemberToForm(member: Member): FormState {
     active: member.active,
     birth_date: member.birth_date ?? "",
     date_joined: member.date_joined ?? "",
+    motorcycle_brand: member.motorcycle_brand ?? "",
+    motorcycle_model: member.motorcycle_model ?? "",
+    motorcycle_color: member.motorcycle_color ?? "",
+    motorcycle_year: member.motorcycle_year ? String(member.motorcycle_year) : "",
+    motorcycle_plate: member.motorcycle_plate ?? "",
     notes: member.notes ?? "",
   };
 }
@@ -130,6 +152,11 @@ function formToPayload(form: FormState): MemberPayload {
     active: form.active,
     birth_date: toNullable(form.birth_date),
     date_joined: toNullable(form.date_joined),
+    motorcycle_brand: toNullable(form.motorcycle_brand),
+    motorcycle_model: toNullable(form.motorcycle_model),
+    motorcycle_color: toNullable(form.motorcycle_color),
+    motorcycle_year: toNullableInt(form.motorcycle_year),
+    motorcycle_plate: toNullable(form.motorcycle_plate),
     notes: toNullable(form.notes),
   };
 }
@@ -465,6 +492,26 @@ function Members() {
                       <dt>Date Joined</dt>
                       <dd>{formatDate(member.date_joined)}</dd>
                     </div>
+                    <div>
+                      <dt>Bike Brand</dt>
+                      <dd>{member.motorcycle_brand ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Bike Model</dt>
+                      <dd>{member.motorcycle_model ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Bike Color</dt>
+                      <dd>{member.motorcycle_color ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Bike Year</dt>
+                      <dd>{member.motorcycle_year ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Plate</dt>
+                      <dd>{member.motorcycle_plate ?? "-"}</dd>
+                    </div>
                   </dl>
                 </button>
               </Card>
@@ -515,6 +562,21 @@ function Members() {
             </p>
             <p>
               <strong>Blood Type:</strong> {selectedMember.blood_type ?? "-"}
+            </p>
+            <p>
+              <strong>Motorcycle Brand:</strong> {selectedMember.motorcycle_brand ?? "-"}
+            </p>
+            <p>
+              <strong>Motorcycle Model:</strong> {selectedMember.motorcycle_model ?? "-"}
+            </p>
+            <p>
+              <strong>Motorcycle Color:</strong> {selectedMember.motorcycle_color ?? "-"}
+            </p>
+            <p>
+              <strong>Motorcycle Year:</strong> {selectedMember.motorcycle_year ?? "-"}
+            </p>
+            <p>
+              <strong>Motorcycle Plate:</strong> {selectedMember.motorcycle_plate ?? "-"}
             </p>
             <p>
               <strong>Notes:</strong> {selectedMember.notes ?? "-"}
@@ -660,6 +722,64 @@ function Members() {
                 id="street_address"
                 value={formState.street_address}
                 onChange={(event) => updateForm("street_address", event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="motorcycle_brand">
+                Motorcycle Brand
+              </label>
+              <Input
+                id="motorcycle_brand"
+                value={formState.motorcycle_brand}
+                onChange={(event) => updateForm("motorcycle_brand", event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="motorcycle_model">
+                Motorcycle Model
+              </label>
+              <Input
+                id="motorcycle_model"
+                value={formState.motorcycle_model}
+                onChange={(event) => updateForm("motorcycle_model", event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="motorcycle_color">
+                Motorcycle Color
+              </label>
+              <Input
+                id="motorcycle_color"
+                value={formState.motorcycle_color}
+                onChange={(event) => updateForm("motorcycle_color", event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="motorcycle_year">
+                Motorcycle Year
+              </label>
+              <Input
+                id="motorcycle_year"
+                type="number"
+                min={1900}
+                max={2100}
+                value={formState.motorcycle_year}
+                onChange={(event) => updateForm("motorcycle_year", event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="motorcycle_plate">
+                Motorcycle Plate
+              </label>
+              <Input
+                id="motorcycle_plate"
+                value={formState.motorcycle_plate}
+                onChange={(event) => updateForm("motorcycle_plate", event.target.value)}
               />
             </div>
 
