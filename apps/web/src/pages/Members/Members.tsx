@@ -144,6 +144,7 @@ function Members() {
 
   const [members, setMembers] = useState<MemberDirectoryRow[]>([]);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const [search, setSearch] = useState("");
   const [rankFilter, setRankFilter] = useState<"all" | Member["member_rank"]>("all");
@@ -261,9 +262,11 @@ function Members() {
       } else {
         setSelectedMemberPhotoUrl(null);
       }
+      setShowDetailsModal(Boolean(member));
     } catch {
       setSelectedMember(null);
       setSelectedMemberPhotoUrl(null);
+      setShowDetailsModal(false);
     } finally {
       setIsSaving(false);
     }
@@ -412,63 +415,70 @@ function Members() {
           <div className="member-card-grid">
             {filteredMembers.map((member) => (
               <Card key={member.id} className="member-card">
-                <button type="button" className="member-card-top" onClick={() => void handleMemberClick(member.id)}>
-                  <Avatar name={member.full_name} src={memberPhotoUrls[member.id] ?? null} className="member-card-avatar" />
-                  <div className="member-card-heading">
-                    <h3>{member.full_name}</h3>
-                    <p>{member.nickname?.trim() || "No nickname"}</p>
-                  </div>
-                </button>
+                <div className="member-card-header">
+                  <button type="button" className="member-card-top" onClick={() => void handleMemberClick(member.id)}>
+                    <Avatar name={member.full_name} src={memberPhotoUrls[member.id] ?? null} className="member-card-avatar" />
+                    <div className="member-card-heading">
+                      <h3>{member.full_name}</h3>
+                      <p>{member.nickname?.trim() || "No nickname"}</p>
+                    </div>
+                  </button>
 
-                <div className="member-card-badges">
-                  <Badge tone={rankTone(member.member_rank)}>{rankLabel(member.member_rank)}</Badge>
-                  {member.archived_at ? (
-                    <Badge tone="danger">Archived</Badge>
-                  ) : (
-                    <Badge tone={member.active ? "success" : "default"}>{member.active ? "Active" : "Inactive"}</Badge>
-                  )}
+                  {isAdmin ? (
+                    <div className="member-card-actions member-card-actions-top">
+                      <Button type="button" size="sm" variant="ghost" onClick={() => void openEditModal(member.id)}>
+                        Edit
+                      </Button>
+                      {!member.archived_at ? (
+                        <Button type="button" size="sm" variant="danger" onClick={() => setArchiveMemberId(member.id)}>
+                          Archive
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
-                <dl className="member-card-meta">
-                  <div>
-                    <dt>Birthday</dt>
-                    <dd>{formatDate(member.birth_date)}</dd>
+                <button type="button" className="member-card-body-button" onClick={() => void handleMemberClick(member.id)}>
+                  <div className="member-card-badges">
+                    <Badge tone={rankTone(member.member_rank)}>{rankLabel(member.member_rank)}</Badge>
+                    {member.archived_at ? (
+                      <Badge tone="danger">Archived</Badge>
+                    ) : (
+                      <Badge tone={member.active ? "success" : "default"}>{member.active ? "Active" : "Inactive"}</Badge>
+                    )}
                   </div>
-                  <div>
-                    <dt>Age</dt>
-                    <dd>{getAgeFromBirthDate(member.birth_date) ?? "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>Location</dt>
-                    <dd>{[member.city, member.state].filter(Boolean).join(", ") || "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>Date Joined</dt>
-                    <dd>{formatDate(member.date_joined)}</dd>
-                  </div>
-                </dl>
 
-                {isAdmin ? (
-                  <div className="member-card-actions">
-                    <Button type="button" size="sm" variant="ghost" onClick={() => void openEditModal(member.id)}>
-                      Edit
-                    </Button>
-                    {!member.archived_at ? (
-                      <Button type="button" size="sm" variant="danger" onClick={() => setArchiveMemberId(member.id)}>
-                        Archive
-                      </Button>
-                    ) : null}
-                  </div>
-                ) : null}
+                  <dl className="member-card-meta">
+                    <div>
+                      <dt>Birthday</dt>
+                      <dd>{formatDate(member.birth_date)}</dd>
+                    </div>
+                    <div>
+                      <dt>Age</dt>
+                      <dd>{getAgeFromBirthDate(member.birth_date) ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Location</dt>
+                      <dd>{[member.city, member.state].filter(Boolean).join(", ") || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Date Joined</dt>
+                      <dd>{formatDate(member.date_joined)}</dd>
+                    </div>
+                  </dl>
+                </button>
               </Card>
             ))}
           </div>
         )
       ) : null}
 
-      {isAdmin && selectedMember ? (
-        <Card>
-          <h2>Member Details</h2>
+      <Modal
+        open={isAdmin && showDetailsModal && Boolean(selectedMember)}
+        title="Member Details"
+        onClose={() => setShowDetailsModal(false)}
+      >
+        {selectedMember ? (
           <div className="details-grid">
             <div className="member-detail-photo-wrap">
               <Avatar name={selectedMember.full_name} src={selectedMemberPhotoUrl} className="member-detail-photo" />
@@ -510,8 +520,8 @@ function Members() {
               <strong>Notes:</strong> {selectedMember.notes ?? "-"}
             </p>
           </div>
-        </Card>
-      ) : null}
+        ) : null}
+      </Modal>
 
       <Modal
         open={showFormModal}

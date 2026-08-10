@@ -653,10 +653,28 @@ a {
   justify-content: space-between;
 }
 
+.member-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .member-card-top {
   display: grid;
   gap: var(--space-3);
   justify-items: start;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  flex: 1;
+}
+
+.member-card-body-button {
+  display: block;
   border: none;
   padding: 0;
   background: transparent;
@@ -717,6 +735,12 @@ a {
   display: flex;
   gap: var(--space-2);
   margin-top: auto;
+}
+
+.member-card-actions-top {
+  margin-top: 0;
+  flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .member-photo-preview-wrap {
