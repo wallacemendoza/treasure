@@ -1,73 +1,85 @@
-import { FormEvent, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { Button, Card, Input } from "../../components/ui";
 
 function Login() {
-  const [identifier, setIdentifier] = useState('')
-  const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
 
-    setLoading(true)
-    setMessage('')
+    setLoading(true);
+    setMessage("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: identifier,
-      password,
-    })
-
-    if (error) {
-      setMessage(error.message)
-      setLoading(false)
-      return
+    try {
+      await signIn(identifier, password);
+      navigate("/dashboard");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unable to sign in.";
+      setMessage(errorMessage);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false)
-navigate('/dashboard')
   }
 
-  return (
-    <main>
-      <h1>Treasure</h1>
-      <h2>Chapter Portal Login</h2>
+  const canSubmit = identifier.trim().length > 0 && password.length > 0 && !loading;
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="identifier">Email</label>
-          <input
-            id="identifier"
-            type="email"
-            value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
-            placeholder="Enter email"
-            required
-          />
+  return (
+    <main className="login-screen">
+      <Card className="login-card">
+        <div className="login-brand">
+          <span className="brand-mark" aria-hidden="true">
+            T
+          </span>
+          <div>
+            <h1>Treasure</h1>
+            <p>Chapter administration portal</p>
+          </div>
         </div>
 
-        <div>
-          <label htmlFor="password">Password</label>
-          <input
+        <form onSubmit={handleSubmit} className="stack-lg">
+          <label htmlFor="identifier" className="field-label">
+            Email or Username
+          </label>
+          <Input
+            id="identifier"
+            type="text"
+            value={identifier}
+            onChange={(event) => setIdentifier(event.target.value)}
+            placeholder="name@example.com or chaptername"
+            autoComplete="username"
+            required
+          />
+
+          <label htmlFor="password" className="field-label">
+            Password
+          </label>
+          <Input
             id="password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Enter password"
+            autoComplete="current-password"
             required
           />
-        </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Signing In...' : 'Sign In'}
-        </button>
-      </form>
+          {message ? <p className="form-error">{message}</p> : null}
 
-      {message && <p>{message}</p>}
+          <Button type="submit" disabled={!canSubmit}>
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
+        </form>
+      </Card>
     </main>
-  )
+  );
 }
 
-export default Login
+export default Login;

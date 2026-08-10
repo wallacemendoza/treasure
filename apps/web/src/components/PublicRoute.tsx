@@ -1,24 +1,24 @@
-import { Navigate } from "react-router-dom";
 import type { PropsWithChildren } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { LoadingSpinner } from "./ui";
 
-function ProtectedRoute({ children }: PropsWithChildren) {
+function PublicRoute({ children }: PropsWithChildren) {
   const { isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
     return (
       <div className="screen-center">
-        <LoadingSpinner label="Loading your workspace..." />
+        <LoadingSpinner label="Checking session..." />
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
 }
 
-export default ProtectedRoute;
+export default PublicRoute;
