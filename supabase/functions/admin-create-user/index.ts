@@ -70,7 +70,15 @@ Deno.serve(async (req) => {
     return json({ error: "Only admins can create users." }, 403);
   }
 
-  let body: { username?: string; email?: string; password?: string; access_role?: string };
+  let body: {
+    username?: string;
+    email?: string;
+    password?: string;
+    access_role?: string;
+    full_name?: string;
+    member_rank?: string;
+    create_member?: boolean;
+  };
   try {
     body = await req.json();
   } catch {
@@ -81,9 +89,16 @@ Deno.serve(async (req) => {
   const email = String(body.email ?? "").trim();
   const password = String(body.password ?? "");
   const accessRole = body.access_role === "admin" ? "admin" : "viewer";
+  const fullName = String(body.full_name ?? "").trim();
+  const memberRank = body.member_rank === "prospect" || body.member_rank === "full_patch" ? body.member_rank : "support";
+  const createMember = body.create_member !== false;
 
   if (!username || !email || password.length < 8) {
     return json({ error: "Username, email, and an 8+ character password are required." }, 400);
+  }
+
+  if (createMember && !fullName) {
+    return json({ error: "Full name is required when creating a member roster entry." }, 400);
   }
 
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
@@ -109,5 +124,19 @@ Deno.serve(async (req) => {
     return json({ error: `User created, but profile setup failed: ${updateError.message}` }, 500);
   }
 
-  return json({ id: created.user.id, username, email, access_role: accessRole });
+  if (createMember) {
+    const { error: memberError } = await adminClient.from("members").insert({
+      profile_id: created.user.id,
+      full_name: fullName,
+      email,
+      member_rank: memberRank,
+      active: true,
+    });
+
+    if (memberError) {
+      return json({ error: `User created, but member setup failed: ${memberError.message}` }, 500);
+    }
+  }
+
+  return json({ id: created.user.id, username, email, access_role: accessRole, member_created: createMember });
 });

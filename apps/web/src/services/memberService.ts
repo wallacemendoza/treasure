@@ -2,6 +2,11 @@ import type { Member } from "@treasure/shared";
 import { supabase } from "../lib/supabase";
 import type { MemberDirectoryRow } from "../types/app";
 
+function isLegacyMemberColumnError(message: string) {
+  const normalized = message.toLowerCase();
+  return normalized.includes("members.birth_date") || normalized.includes("members.nickname");
+}
+
 export interface MemberPayload {
   full_name: string;
   nickname: string | null;
@@ -28,7 +33,13 @@ export async function listMembersDirectory(): Promise<MemberDirectoryRow[]> {
   if (error) throw new Error(error.message);
 
   const rows = (data ?? []) as Omit<MemberDirectoryRow, "archived_at">[];
-  return rows.map((row) => ({ ...row, archived_at: null }));
+  return rows.map((row) => ({
+    ...row,
+    nickname: row.nickname ?? null,
+    birth_date: row.birth_date ?? null,
+    prior_balance_due: row.prior_balance_due ?? 0,
+    archived_at: null,
+  }));
 }
 
 export async function listMembersForAdmin(includeArchived: boolean): Promise<MemberDirectoryRow[]> {
@@ -42,7 +53,30 @@ export async function listMembersForAdmin(includeArchived: boolean): Promise<Mem
   }
 
   const { data, error } = await query;
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (!isLegacyMemberColumnError(error.message)) {
+      throw new Error(error.message);
+    }
+
+    let legacyQuery = supabase
+      .from("members")
+      .select("id, full_name, member_rank, active, city, state, photo_url, date_joined, archived_at, prior_balance_due")
+      .order("full_name", { ascending: true });
+
+    if (!includeArchived) {
+      legacyQuery = legacyQuery.is("archived_at", null);
+    }
+
+    const { data: legacyData, error: legacyError } = await legacyQuery;
+    if (legacyError) throw new Error(legacyError.message);
+
+    return (legacyData ?? []).map((row) => ({
+      ...(row as Omit<MemberDirectoryRow, "nickname" | "birth_date">),
+      nickname: null,
+      birth_date: null,
+    })) as MemberDirectoryRow[];
+  }
+
   return (data ?? []) as MemberDirectoryRow[];
 }
 
@@ -59,12 +93,28 @@ export async function getMemberByIdForAdmin(memberId: string): Promise<Member | 
 
 export async function createMemberByAdmin(payload: MemberPayload): Promise<void> {
   const { error } = await supabase.from("members").insert(payload);
-  if (error) throw new Error(error.message);
+  if (!error) return;
+
+  if (!isLegacyMemberColumnError(error.message)) {
+    throw new Error(error.message);
+  }
+
+  const { birth_date: _birthDate, nickname: _nickname, ...legacyPayload } = payload;
+  const { error: legacyError } = await supabase.from("members").insert(legacyPayload);
+  if (legacyError) throw new Error(legacyError.message);
 }
 
 export async function updateMemberByAdmin(memberId: string, payload: Partial<MemberPayload>): Promise<void> {
   const { error } = await supabase.from("members").update(payload).eq("id", memberId);
-  if (error) throw new Error(error.message);
+  if (!error) return;
+
+  if (!isLegacyMemberColumnError(error.message)) {
+    throw new Error(error.message);
+  }
+
+  const { birth_date: _birthDate, nickname: _nickname, ...legacyPayload } = payload;
+  const { error: legacyError } = await supabase.from("members").update(legacyPayload).eq("id", memberId);
+  if (legacyError) throw new Error(legacyError.message);
 }
 
 export async function archiveMemberByAdmin(memberId: string): Promise<void> {

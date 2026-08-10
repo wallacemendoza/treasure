@@ -194,7 +194,7 @@ function Members() {
 
       if (!normalized) return true;
 
-      const haystack = `${member.full_name} ${member.city ?? ""} ${member.state ?? ""} ${member.member_rank}`.toLowerCase();
+      const haystack = `${member.full_name} ${member.nickname ?? ""} ${member.city ?? ""} ${member.state ?? ""} ${member.member_rank}`.toLowerCase();
       return haystack.includes(normalized);
     });
   }, [activeFilter, archivedFilter, isAdmin, members, rankFilter, search]);

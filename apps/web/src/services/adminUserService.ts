@@ -5,6 +5,9 @@ export interface CreateUserPayload {
   email: string;
   password: string;
   access_role: "admin" | "viewer";
+  full_name: string;
+  member_rank: "support" | "prospect" | "full_patch";
+  create_member: boolean;
 }
 
 export async function createUserByAdmin(payload: CreateUserPayload): Promise<void> {

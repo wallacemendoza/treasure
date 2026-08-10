@@ -11,6 +11,9 @@ interface NewUserForm {
   email: string;
   password: string;
   access_role: Profile["access_role"];
+  full_name: string;
+  member_rank: "support" | "prospect" | "full_patch";
+  create_member: boolean;
 }
 
 const EMPTY_NEW_USER: NewUserForm = {
@@ -18,6 +21,9 @@ const EMPTY_NEW_USER: NewUserForm = {
   email: "",
   password: "",
   access_role: "viewer",
+  full_name: "",
+  member_rank: "support",
+  create_member: true,
 };
 
 function Settings() {
@@ -90,6 +96,11 @@ function Settings() {
 
     if (newUser.password.length < 8) {
       setCreateError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (newUser.create_member && !newUser.full_name.trim()) {
+      setCreateError("Full name is required when creating a member entry.");
       return;
     }
 
@@ -206,6 +217,18 @@ function Settings() {
       <Modal open={showCreateModal} title="Create User" onClose={() => setShowCreateModal(false)}>
         <form className="stack-md" onSubmit={submitCreateUser}>
           <div>
+            <label className="field-label" htmlFor="new_full_name">
+              Full Name
+            </label>
+            <Input
+              id="new_full_name"
+              value={newUser.full_name}
+              onChange={(event) => updateNewUser("full_name", event.target.value)}
+              required={newUser.create_member}
+            />
+          </div>
+
+          <div>
             <label className="field-label" htmlFor="new_username">
               Username
             </label>
@@ -249,6 +272,22 @@ function Settings() {
           </div>
 
           <div>
+            <label className="field-label" htmlFor="new_member_rank">
+              Member Rank
+            </label>
+            <Select
+              id="new_member_rank"
+              value={newUser.member_rank}
+              onChange={(event) => updateNewUser("member_rank", event.target.value as NewUserForm["member_rank"])}
+              disabled={!newUser.create_member}
+            >
+              <option value="support">Support</option>
+              <option value="prospect">Prospect</option>
+              <option value="full_patch">Full Patch</option>
+            </Select>
+          </div>
+
+          <div>
             <label className="field-label" htmlFor="new_access_role">
               Access Role
             </label>
@@ -261,6 +300,16 @@ function Settings() {
               <option value="admin">Admin</option>
             </Select>
           </div>
+
+          <label className="checkbox-row" htmlFor="new_create_member">
+            <input
+              id="new_create_member"
+              type="checkbox"
+              checked={newUser.create_member}
+              onChange={(event) => updateNewUser("create_member", event.target.checked)}
+            />
+            <span>Create linked member roster entry</span>
+          </label>
 
           {createError ? <p className="form-error">{createError}</p> : null}
 
