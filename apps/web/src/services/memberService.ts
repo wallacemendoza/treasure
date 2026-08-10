@@ -4,7 +4,34 @@ import type { MemberDirectoryRow } from "../types/app";
 
 function isLegacyMemberColumnError(message: string) {
   const normalized = message.toLowerCase();
-  return normalized.includes("members.birth_date") || normalized.includes("members.nickname");
+  return (
+    normalized.includes("members.birth_date") ||
+    normalized.includes("members.nickname") ||
+    normalized.includes("members.prior_balance_due")
+  );
+}
+
+function mapLegacyDirectoryRow(
+  row: Omit<MemberDirectoryRow, "nickname" | "birth_date" | "prior_balance_due" | "archived_at"> & {
+    archived_at?: string | null;
+  },
+): MemberDirectoryRow {
+  return {
+    ...row,
+    nickname: null,
+    birth_date: null,
+    prior_balance_due: 0,
+    archived_at: row.archived_at ?? null,
+  };
+}
+
+function mapLegacyMember(member: Omit<Member, "nickname" | "birth_date" | "prior_balance_due">): Member {
+  return {
+    ...member,
+    nickname: null,
+    birth_date: null,
+    prior_balance_due: 0,
+  };
 }
 
 export interface MemberPayload {
@@ -30,7 +57,23 @@ export interface MemberPayload {
 
 export async function listMembersDirectory(): Promise<MemberDirectoryRow[]> {
   const { data, error } = await supabase.rpc("member_directory");
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (!isLegacyMemberColumnError(error.message)) {
+      throw new Error(error.message);
+    }
+
+    const { data: legacyData, error: legacyError } = await supabase
+      .from("members")
+      .select("id, full_name, member_rank, active, city, state, photo_url, date_joined")
+      .is("archived_at", null)
+      .order("full_name", { ascending: true });
+
+    if (legacyError) throw new Error(legacyError.message);
+
+    return (legacyData ?? []).map((row) =>
+      mapLegacyDirectoryRow(row as Omit<MemberDirectoryRow, "nickname" | "birth_date" | "prior_balance_due" | "archived_at">),
+    );
+  }
 
   const rows = (data ?? []) as Omit<MemberDirectoryRow, "archived_at">[];
   return rows.map((row) => ({
@@ -60,7 +103,7 @@ export async function listMembersForAdmin(includeArchived: boolean): Promise<Mem
 
     let legacyQuery = supabase
       .from("members")
-      .select("id, full_name, member_rank, active, city, state, photo_url, date_joined, archived_at, prior_balance_due")
+      .select("id, full_name, member_rank, active, city, state, photo_url, date_joined, archived_at")
       .order("full_name", { ascending: true });
 
     if (!includeArchived) {
@@ -70,11 +113,11 @@ export async function listMembersForAdmin(includeArchived: boolean): Promise<Mem
     const { data: legacyData, error: legacyError } = await legacyQuery;
     if (legacyError) throw new Error(legacyError.message);
 
-    return (legacyData ?? []).map((row) => ({
-      ...(row as Omit<MemberDirectoryRow, "nickname" | "birth_date">),
-      nickname: null,
-      birth_date: null,
-    })) as MemberDirectoryRow[];
+    return (legacyData ?? []).map((row) =>
+      mapLegacyDirectoryRow(
+        row as Omit<MemberDirectoryRow, "nickname" | "birth_date" | "prior_balance_due"> & { archived_at?: string | null },
+      ),
+    );
   }
 
   return (data ?? []) as MemberDirectoryRow[];
@@ -87,7 +130,21 @@ export async function getMemberByIdForAdmin(memberId: string): Promise<Member | 
     .eq("id", memberId)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (!isLegacyMemberColumnError(error.message)) {
+      throw new Error(error.message);
+    }
+
+    const { data: legacyData, error: legacyError } = await supabase
+      .from("members")
+      .select("id, profile_id, full_name, email, phone, street_address, city, state, zip, photo_url, emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, blood_type, member_rank, active, archived_at, date_joined, notes, created_at, updated_at")
+      .eq("id", memberId)
+      .maybeSingle();
+
+    if (legacyError) throw new Error(legacyError.message);
+    return legacyData ? mapLegacyMember(legacyData as Omit<Member, "nickname" | "birth_date" | "prior_balance_due">) : null;
+  }
+
   return data as Member | null;
 }
 
