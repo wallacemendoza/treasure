@@ -54,15 +54,16 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-  let email = identifier
+  const normalizedIdentifier = identifier.trim()
+  let email = normalizedIdentifier
 
-  if (!identifier.includes('@')) {
+  if (!normalizedIdentifier.includes('@')) {
     // Service-role client: the only caller allowed to execute
     // resolve_username_email (see supabase/schema.sql — the grant
     // is service_role only, nothing else).
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
     const { data, error } = await adminClient.rpc('resolve_username_email', {
-      lookup_username: identifier,
+      lookup_username: normalizedIdentifier,
     })
 
     if (error || !data) {

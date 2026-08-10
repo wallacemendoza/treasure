@@ -30,6 +30,14 @@ function getFriendlyAuthError(message: string) {
     return "Invalid username/email or password.";
   }
 
+  if (normalized.includes("failed to fetch") || normalized.includes("networkerror")) {
+    return "Unable to reach login service. Check your connection and try again.";
+  }
+
+  if (normalized.includes("username-login") || normalized.includes("function") || normalized.includes("edge")) {
+    return "Username login service is unavailable right now. Contact an admin to deploy the username-login function.";
+  }
+
   if (normalized.includes("email not confirmed")) {
     return "Your email is not confirmed yet. Check your inbox.";
   }
@@ -130,14 +138,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     });
 
     if (error) {
-      throw new Error("Unable to reach login service. Please try again.");
+      throw new Error(getFriendlyAuthError(error.message));
     }
 
     const accessToken = data?.access_token;
     const refreshToken = data?.refresh_token;
 
     if (!accessToken || !refreshToken) {
-      throw new Error("Invalid username/email or password.");
+      const functionMessage = typeof data?.error === "string" ? data.error : "Invalid username/email or password.";
+      throw new Error(getFriendlyAuthError(functionMessage));
     }
 
     const { error: sessionError } = await supabase.auth.setSession({

@@ -284,7 +284,7 @@ as $$
   select u.email
   from auth.users u
   join public.profiles p on p.id = u.id
-  where p.username = lookup_username
+  where lower(trim(p.username)) = lower(trim(lookup_username))
     and p.login_enabled = true
   limit 1;
 $$;
