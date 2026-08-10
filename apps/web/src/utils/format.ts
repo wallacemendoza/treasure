@@ -19,6 +19,23 @@ export function formatDate(value: string | null | undefined) {
   return DATE_FORMATTER.format(date);
 }
 
+export function getAgeFromBirthDate(value: string | null | undefined) {
+  if (!value) return null;
+
+  const birthDate = new Date(value);
+  if (Number.isNaN(birthDate.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDifference = today.getMonth() - birthDate.getMonth();
+
+  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 export function formatDateTime(value: string | null | undefined) {
   if (!value) return "-";
   const date = new Date(value);

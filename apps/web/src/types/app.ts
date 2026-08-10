@@ -13,11 +13,13 @@ export interface AuthState {
 export interface MemberDirectoryRow {
   id: string;
   full_name: string;
+  nickname: string | null;
   member_rank: Member["member_rank"];
   active: boolean;
   city: string | null;
   state: string | null;
   photo_url: string | null;
+  birth_date: string | null;
   date_joined: string | null;
   archived_at: string | null;
   prior_balance_due: number;

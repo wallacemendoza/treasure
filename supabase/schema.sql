@@ -46,6 +46,7 @@ create table if not exists public.members (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid unique references public.profiles (id) on delete set null,
   full_name text not null,
+  nickname text,
   email text,
   phone text,
   street_address text,
@@ -65,6 +66,7 @@ create table if not exists public.members (
   -- "Deleting" a member from the UI should set archived_at = now()
   -- and leave the row (and its history) intact.
   archived_at timestamptz,
+  birth_date date,
   date_joined date,
   notes text,
   created_at timestamptz not null default now(),

@@ -27,13 +27,14 @@ import {
   type MemberPayload,
 } from "../../services/memberService";
 import type { MemberDirectoryRow } from "../../types/app";
-import { cleanPhoneInput, formatDate, formatPhone } from "../../utils/format";
+import { cleanPhoneInput, formatDate, formatPhone, getAgeFromBirthDate } from "../../utils/format";
 
 const RANK_OPTIONS: Member["member_rank"][] = ["support", "prospect", "full_patch"];
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 interface FormState {
   full_name: string;
+  nickname: string;
   email: string;
   phone: string;
   street_address: string;
@@ -47,12 +48,14 @@ interface FormState {
   blood_type: string;
   member_rank: Member["member_rank"];
   active: boolean;
+  birth_date: string;
   date_joined: string;
   notes: string;
 }
 
 const EMPTY_FORM: FormState = {
   full_name: "",
+  nickname: "",
   email: "",
   phone: "",
   street_address: "",
@@ -66,6 +69,7 @@ const EMPTY_FORM: FormState = {
   blood_type: "",
   member_rank: "support",
   active: true,
+  birth_date: "",
   date_joined: "",
   notes: "",
 };
@@ -90,6 +94,7 @@ function toNullable(value: string) {
 function mapMemberToForm(member: Member): FormState {
   return {
     full_name: member.full_name,
+    nickname: member.nickname ?? "",
     email: member.email ?? "",
     phone: member.phone ?? "",
     street_address: member.street_address ?? "",
@@ -103,6 +108,7 @@ function mapMemberToForm(member: Member): FormState {
     blood_type: member.blood_type ?? "",
     member_rank: member.member_rank,
     active: member.active,
+    birth_date: member.birth_date ?? "",
     date_joined: member.date_joined ?? "",
     notes: member.notes ?? "",
   };
@@ -111,6 +117,7 @@ function mapMemberToForm(member: Member): FormState {
 function formToPayload(form: FormState): MemberPayload {
   return {
     full_name: form.full_name.trim(),
+    nickname: toNullable(form.nickname),
     email: toNullable(form.email),
     phone: toNullable(form.phone),
     street_address: toNullable(form.street_address),
@@ -124,6 +131,7 @@ function formToPayload(form: FormState): MemberPayload {
     blood_type: toNullable(form.blood_type),
     member_rank: form.member_rank,
     active: form.active,
+    birth_date: toNullable(form.birth_date),
     date_joined: toNullable(form.date_joined),
     notes: toNullable(form.notes),
   };
@@ -353,8 +361,11 @@ function Members() {
               columns={
                 <tr>
                   <th>Member</th>
+                  <th>Nickname</th>
                   <th>Rank</th>
                   <th>Status</th>
+                  <th>Birthday</th>
+                  <th>Age</th>
                   <th>Location</th>
                   <th>Date Joined</th>
                   {isAdmin ? <th>Actions</th> : null}
@@ -370,6 +381,9 @@ function Members() {
                     </button>
                   </td>
                   <td>
+                    {member.nickname?.trim() || "-"}
+                  </td>
+                  <td>
                     <Badge tone={rankTone(member.member_rank)}>{rankLabel(member.member_rank)}</Badge>
                   </td>
                   <td>
@@ -379,6 +393,8 @@ function Members() {
                       <Badge tone={member.active ? "success" : "default"}>{member.active ? "Active" : "Inactive"}</Badge>
                     )}
                   </td>
+                  <td>{formatDate(member.birth_date)}</td>
+                  <td>{getAgeFromBirthDate(member.birth_date) ?? "-"}</td>
                   <td>{[member.city, member.state].filter(Boolean).join(", ") || "-"}</td>
                   <td>{formatDate(member.date_joined)}</td>
                   {isAdmin ? (
@@ -407,10 +423,19 @@ function Members() {
           <h2>Member Details</h2>
           <div className="details-grid">
             <p>
+              <strong>Nickname:</strong> {selectedMember.nickname ?? "-"}
+            </p>
+            <p>
               <strong>Email:</strong> {selectedMember.email ?? "-"}
             </p>
             <p>
               <strong>Phone:</strong> {formatPhone(selectedMember.phone)}
+            </p>
+            <p>
+              <strong>Birthday:</strong> {formatDate(selectedMember.birth_date)}
+            </p>
+            <p>
+              <strong>Age:</strong> {getAgeFromBirthDate(selectedMember.birth_date) ?? "-"}
             </p>
             <p>
               <strong>Address:</strong>{" "}
@@ -457,6 +482,17 @@ function Members() {
             </div>
 
             <div>
+              <label className="field-label" htmlFor="nickname">
+                Nickname
+              </label>
+              <Input
+                id="nickname"
+                value={formState.nickname}
+                onChange={(event) => updateForm("nickname", event.target.value)}
+              />
+            </div>
+
+            <div>
               <label className="field-label" htmlFor="member_rank">
                 Rank
               </label>
@@ -493,6 +529,18 @@ function Members() {
                 id="phone"
                 value={formState.phone}
                 onChange={(event) => updateForm("phone", cleanPhoneInput(event.target.value))}
+              />
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="birth_date">
+                Birthday
+              </label>
+              <Input
+                id="birth_date"
+                type="date"
+                value={formState.birth_date}
+                onChange={(event) => updateForm("birth_date", event.target.value)}
               />
             </div>
 

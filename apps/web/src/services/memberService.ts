@@ -4,6 +4,7 @@ import type { MemberDirectoryRow } from "../types/app";
 
 export interface MemberPayload {
   full_name: string;
+  nickname: string | null;
   email: string | null;
   phone: string | null;
   street_address: string | null;
@@ -17,6 +18,7 @@ export interface MemberPayload {
   blood_type: string | null;
   member_rank: Member["member_rank"];
   active: boolean;
+  birth_date: string | null;
   date_joined: string | null;
   notes: string | null;
 }
@@ -32,7 +34,7 @@ export async function listMembersDirectory(): Promise<MemberDirectoryRow[]> {
 export async function listMembersForAdmin(includeArchived: boolean): Promise<MemberDirectoryRow[]> {
   let query = supabase
     .from("members")
-    .select("id, full_name, member_rank, active, city, state, photo_url, date_joined, archived_at, prior_balance_due")
+    .select("id, full_name, nickname, member_rank, active, city, state, photo_url, birth_date, date_joined, archived_at, prior_balance_due")
     .order("full_name", { ascending: true });
 
   if (!includeArchived) {

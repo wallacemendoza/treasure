@@ -5,6 +5,7 @@ export interface Member {
   profile_id: string | null;
 
   full_name: string;
+  nickname: string | null;
   email: string | null;
   phone: string | null;
 
@@ -25,6 +26,7 @@ export interface Member {
   active: boolean;
   archived_at: string | null;
 
+  birth_date: string | null;
   date_joined: string | null;
   notes: string | null;
 
