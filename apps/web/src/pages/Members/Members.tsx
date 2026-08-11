@@ -441,25 +441,27 @@ function Members() {
               <Card key={member.id} className="member-card">
                 <div className="member-card-header">
                   <button type="button" className="member-card-top" onClick={() => void handleMemberClick(member.id)}>
-                    <Avatar name={member.full_name} src={memberPhotoUrls[member.id]} className="avatar-card" />
                     <div className="member-card-heading">
                       <p className="member-card-nickname">{member.nickname?.trim() || "No nickname"}</p>
                       <p className="member-card-name">{member.full_name}</p>
                     </div>
                   </button>
 
-                  {isAdmin ? (
-                    <div className="member-card-actions member-card-actions-top">
-                      <Button type="button" size="sm" variant="ghost" onClick={() => void openEditModal(member.id)}>
-                        Edit
-                      </Button>
-                      {!member.archived_at ? (
-                        <Button type="button" size="sm" variant="danger" onClick={() => setArchiveMemberId(member.id)}>
-                          Archive
+                  <div className="member-card-side">
+                    {isAdmin ? (
+                      <div className="member-card-actions member-card-actions-top">
+                        <Button type="button" size="sm" variant="ghost" onClick={() => void openEditModal(member.id)}>
+                          Edit
                         </Button>
-                      ) : null}
-                    </div>
-                  ) : null}
+                        {!member.archived_at ? (
+                          <Button type="button" size="sm" variant="danger" onClick={() => setArchiveMemberId(member.id)}>
+                            Archive
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <Avatar name={member.full_name} src={memberPhotoUrls[member.id]} className="avatar-card" />
+                  </div>
                 </div>
 
                 <button type="button" className="member-card-body-button" onClick={() => void handleMemberClick(member.id)}>
