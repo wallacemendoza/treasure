@@ -59,3 +59,23 @@ export async function setDuesMandatoryByAdmin(memberId: string, duesMandatory: b
   const { error } = await supabase.from("members").update({ dues_mandatory: duesMandatory }).eq("id", memberId);
   if (error) throw new Error(error.message);
 }
+
+export async function getCurrentBalance(): Promise<number> {
+  const { data, error } = await supabase
+    .from("chapter_settings")
+    .select("value")
+    .eq("key", "current_balance")
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  const value = data?.value;
+  return typeof value === "number" ? value : 0;
+}
+
+export async function setCurrentBalanceByAdmin(amount: number): Promise<void> {
+  const { error } = await supabase
+    .from("chapter_settings")
+    .upsert({ key: "current_balance", value: amount });
+
+  if (error) throw new Error(error.message);
+}

@@ -16,8 +16,10 @@ import {
 import { useAuth } from "../../hooks/useAuth";
 import { listMembersDirectory, listMembersForAdmin } from "../../services/memberService";
 import {
+  getCurrentBalance,
   getMonthlyDuesAmount,
   listDuesPaymentsForYear,
+  setCurrentBalanceByAdmin,
   setDuesMandatoryByAdmin,
   setMonthlyDuesAmountByAdmin,
   setPriorBalanceByAdmin,
@@ -72,18 +74,24 @@ function Treasury() {
   const [showDuesSettingModal, setShowDuesSettingModal] = useState(false);
   const [duesSettingInput, setDuesSettingInput] = useState("30");
 
+  const [currentBalance, setCurrentBalance] = useState(0);
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [balanceInput, setBalanceInput] = useState("0");
+
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [memberRows, amount, duesRows] = await Promise.all([
+      const [memberRows, amount, duesRows, balance] = await Promise.all([
         isAdmin ? listMembersForAdmin(false) : listMembersDirectory(),
         getMonthlyDuesAmount(),
         listDuesPaymentsForYear(year),
+        getCurrentBalance(),
       ]);
       setMembers(memberRows);
       setDuesAmount(amount);
       setPayments(duesRows);
+      setCurrentBalance(balance);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load treasury data.");
     } finally {
@@ -225,6 +233,22 @@ function Treasury() {
     }
   }
 
+  async function submitBalance(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const amount = Number(balanceInput);
+    if (Number.isNaN(amount)) return;
+    setIsSaving(true);
+    try {
+      await setCurrentBalanceByAdmin(amount);
+      setCurrentBalance(amount);
+      setShowBalanceModal(false);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to update treasury balance.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function submitDuesSetting(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const amount = Number(duesSettingInput);
@@ -253,6 +277,25 @@ function Treasury() {
 
   return (
     <div className="stack-xl">
+      <div className="treasury-balance-hero">
+        <div>
+          <p className="treasury-balance-label">Current Treasury Balance</p>
+          <p className="treasury-balance-amount">${currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </div>
+        {isAdmin ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setBalanceInput(String(currentBalance));
+              setShowBalanceModal(true);
+            }}
+          >
+            Edit Balance
+          </Button>
+        ) : null}
+      </div>
+
       <PageHeader
         title="Treasury Ledger"
         subtitle={`${year} monthly contributions · $${duesAmount.toFixed(2)} / member / month`}
@@ -470,6 +513,32 @@ function Treasury() {
 
           <div className="modal-footer">
             <Button type="button" variant="secondary" onClick={() => setEditingCell(null)} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={showBalanceModal} title="Update Treasury Balance" onClose={() => setShowBalanceModal(false)}>
+        <form className="stack-md" onSubmit={submitBalance}>
+          <div>
+            <label className="field-label" htmlFor="treasury_balance">
+              Current Balance (USD)
+            </label>
+            <Input
+              id="treasury_balance"
+              type="number"
+              step="0.01"
+              value={balanceInput}
+              onChange={(event) => setBalanceInput(event.target.value)}
+              required
+            />
+          </div>
+          <div className="modal-footer">
+            <Button type="button" variant="secondary" onClick={() => setShowBalanceModal(false)} disabled={isSaving}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>
