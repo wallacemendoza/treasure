@@ -1711,9 +1711,27 @@ a {
   opacity: 0.18;
 }
 
+.login-bg-emblem {
+  position: absolute;
+  inset: auto -120px -110px auto;
+  width: clamp(380px, 46vw, 640px);
+  aspect-ratio: 1 / 1;
+  background-image: url("./assets/treasure-logo.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.14;
+  filter: drop-shadow(0 0 40px rgba(198, 34, 40, 0.28)) drop-shadow(0 0 22px rgba(232, 198, 90, 0.2));
+  transform-origin: 50% 50%;
+  animation: loginEmblemFloat 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .login-card {
   width: min(480px, 100%);
   position: relative;
+  z-index: 3;
   overflow: hidden;
   border: 1px solid #3b2b1a;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(201, 162, 39, 0.08) inset;
@@ -1794,6 +1812,18 @@ a {
   }
   100% {
     transform: translate3d(-80px, -36px, 0);
+  }
+}
+
+@keyframes loginEmblemFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(-3deg);
+    opacity: 0.13;
+  }
+  50% {
+    transform: translate3d(-12px, -14px, 0) scale(1.04) rotate(2deg);
+    opacity: 0.2;
   }
 }
 
@@ -1953,6 +1983,13 @@ a {
 
   .login-screen {
     padding: var(--space-4);
+  }
+
+  .login-bg-emblem {
+    width: 88vw;
+    right: -34vw;
+    bottom: -20vw;
+    opacity: 0.1;
   }
 
   .login-brand {

@@ -34,6 +34,7 @@ function Login() {
 
   return (
     <main className="login-screen">
+      <div className="login-bg-emblem" aria-hidden="true" />
       <Card className="login-card">
         <div className="login-brand">
           <img className="login-logo" src={treasureLogo} alt="Treasure USA Chapter logo" />
