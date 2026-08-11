@@ -29,114 +29,123 @@ function json(body: unknown, status = 200) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS });
-  }
-  if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
-  }
-
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const callerToken = authHeader.replace(/^Bearer\s+/i, "");
-  if (!callerToken) {
-    return json({ error: "Missing Authorization header." }, 401);
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-  // Identify the caller using their own token against the anon
-  // client — this never uses the service role to impersonate them.
-  const callerClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: `Bearer ${callerToken}` } },
-  });
-  const { data: callerData, error: callerError } = await callerClient.auth.getUser();
-  if (callerError || !callerData?.user) {
-    return json({ error: "Invalid session." }, 401);
-  }
-
-  const adminClient = createClient(supabaseUrl, serviceRoleKey);
-
-  // Check the caller is actually an admin — service role bypasses
-  // RLS, so this is a real permission check, not a UI-only one.
-  const { data: callerProfile, error: profileError } = await adminClient
-    .from("profiles")
-    .select("access_role, login_enabled")
-    .eq("id", callerData.user.id)
-    .maybeSingle();
-
-  if (profileError || !callerProfile || callerProfile.access_role !== "admin" || !callerProfile.login_enabled) {
-    return json({ error: "Only admins can create users." }, 403);
-  }
-
-  let body: {
-    username?: string;
-    email?: string;
-    password?: string;
-    access_role?: string;
-    full_name?: string;
-    member_rank?: string;
-    create_member?: boolean;
-  };
   try {
-    body = await req.json();
-  } catch {
-    return json({ error: "Invalid request body." }, 400);
-  }
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: CORS_HEADERS });
+    }
+    if (req.method !== "POST") {
+      return json({ error: "Method not allowed" }, 405);
+    }
 
-  const username = String(body.username ?? "").trim();
-  const email = String(body.email ?? "").trim();
-  const password = String(body.password ?? "");
-  const accessRole = body.access_role === "admin" ? "admin" : "viewer";
-  const fullName = String(body.full_name ?? "").trim();
-  const memberRank = body.member_rank === "prospect" || body.member_rank === "full_patch" ? body.member_rank : "support";
-  const createMember = body.create_member !== false;
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const callerToken = authHeader.replace(/^Bearer\s+/i, "");
+    if (!callerToken) {
+      return json({ error: "Missing Authorization header." }, 401);
+    }
 
-  if (!username || !email || password.length < 8) {
-    return json({ error: "Username, email, and an 8+ character password are required." }, 400);
-  }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (createMember && !fullName) {
-    return json({ error: "Full name is required when creating a member roster entry." }, 400);
-  }
+    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+      return json({ error: "Function configuration is incomplete (missing Supabase env vars)." }, 500);
+    }
 
-  const { data: created, error: createError } = await adminClient.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { username },
-  });
+    // Identify the caller using their own token against the anon
+    // client — this never uses the service role to impersonate them.
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: `Bearer ${callerToken}` } },
+    });
+    const { data: callerData, error: callerError } = await callerClient.auth.getUser();
+    if (callerError || !callerData?.user) {
+      return json({ error: "Invalid session." }, 401);
+    }
 
-  if (createError || !created?.user) {
-    return json({ error: createError?.message ?? "Unable to create the user." }, 400);
-  }
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-  // The on_auth_user_created trigger already inserted a default
-  // profiles row (viewer, username derived from email). Set the
-  // real username and requested role now that we know them.
-  const { error: updateError } = await adminClient
-    .from("profiles")
-    .update({ username, access_role: accessRole })
-    .eq("id", created.user.id);
+    // Check the caller is actually an admin — service role bypasses
+    // RLS, so this is a real permission check, not a UI-only one.
+    const { data: callerProfile, error: profileError } = await adminClient
+      .from("profiles")
+      .select("access_role, login_enabled")
+      .eq("id", callerData.user.id)
+      .maybeSingle();
 
-  if (updateError) {
-    return json({ error: `User created, but profile setup failed: ${updateError.message}` }, 500);
-  }
+    if (profileError || !callerProfile || callerProfile.access_role !== "admin" || !callerProfile.login_enabled) {
+      return json({ error: "Only admins can create users." }, 403);
+    }
 
-  if (createMember) {
-    const { error: memberError } = await adminClient.from("members").insert({
-      profile_id: created.user.id,
-      full_name: fullName,
+    let body: {
+      username?: string;
+      email?: string;
+      password?: string;
+      access_role?: string;
+      full_name?: string;
+      member_rank?: string;
+      create_member?: boolean;
+    };
+    try {
+      body = await req.json();
+    } catch {
+      return json({ error: "Invalid request body." }, 400);
+    }
+
+    const username = String(body.username ?? "").trim();
+    const email = String(body.email ?? "").trim();
+    const password = String(body.password ?? "");
+    const accessRole = body.access_role === "admin" ? "admin" : "viewer";
+    const fullName = String(body.full_name ?? "").trim();
+    const memberRank = body.member_rank === "prospect" || body.member_rank === "full_patch" ? body.member_rank : "support";
+    const createMember = body.create_member !== false;
+
+    if (!username || !email || password.length < 8) {
+      return json({ error: "Username, email, and an 8+ character password are required." }, 400);
+    }
+
+    if (createMember && !fullName) {
+      return json({ error: "Full name is required when creating a member roster entry." }, 400);
+    }
+
+    const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email,
-      member_rank: memberRank,
-      active: true,
+      password,
+      email_confirm: true,
+      user_metadata: { username },
     });
 
-    if (memberError) {
-      return json({ error: `User created, but member setup failed: ${memberError.message}` }, 500);
+    if (createError || !created?.user) {
+      return json({ error: createError?.message ?? "Unable to create the user." }, 400);
     }
-  }
 
-  return json({ id: created.user.id, username, email, access_role: accessRole, member_created: createMember });
+    // The on_auth_user_created trigger already inserted a default
+    // profiles row (viewer, username derived from email). Set the
+    // real username and requested role now that we know them.
+    const { error: updateError } = await adminClient
+      .from("profiles")
+      .update({ username, access_role: accessRole })
+      .eq("id", created.user.id);
+
+    if (updateError) {
+      return json({ error: `User created, but profile setup failed: ${updateError.message}` }, 500);
+    }
+
+    if (createMember) {
+      const { error: memberError } = await adminClient.from("members").insert({
+        profile_id: created.user.id,
+        full_name: fullName,
+        email,
+        member_rank: memberRank,
+        active: true,
+      });
+
+      if (memberError) {
+        return json({ error: `User created, but member setup failed: ${memberError.message}` }, 500);
+      }
+    }
+
+    return json({ id: created.user.id, username, email, access_role: accessRole, member_created: createMember });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unexpected function failure.";
+    return json({ error: message }, 500);
+  }
 });
