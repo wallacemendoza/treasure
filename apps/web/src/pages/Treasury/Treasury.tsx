@@ -448,7 +448,7 @@ function Treasury() {
               {topDebtors.map((member) => (
                 <li key={member.id} className="treas-debtor-row">
                   <div className="treas-debtor-info">
-                    <span className="treas-debtor-name">{member.full_name}</span>
+                    <span className="treas-debtor-name">{member.nickname?.trim() || member.full_name}</span>
                     <span className="treas-debtor-detail">
                       {member.unpaidMonths > 0 ? `${member.unpaidMonths} mo unpaid` : ""}
                       {member.prior > 0 ? `${member.unpaidMonths > 0 ? " · " : ""}prior $${member.prior.toFixed(0)}` : ""}
