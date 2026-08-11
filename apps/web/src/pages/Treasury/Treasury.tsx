@@ -24,6 +24,7 @@ import {
   upsertDuesCellByAdmin,
 } from "../../services/treasuryService";
 import type { MemberDirectoryRow } from "../../types/app";
+import { getYearsSinceDate } from "../../utils/format";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -58,6 +59,7 @@ function Treasury() {
   const [duesAmount, setDuesAmount] = useState(30);
   const [payments, setPayments] = useState<DuesPayment[]>([]);
   const [priorBalances, setPriorBalances] = useState<Record<string, number>>({});
+  const [priorBalanceDrafts, setPriorBalanceDrafts] = useState<Record<string, string>>({});
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -95,10 +97,13 @@ function Treasury() {
 
   useEffect(() => {
     const balances: Record<string, number> = {};
+    const drafts: Record<string, string> = {};
     for (const member of members) {
       balances[member.id] = member.prior_balance_due ?? 0;
+      drafts[member.id] = String(member.prior_balance_due ?? 0);
     }
     setPriorBalances(balances);
+    setPriorBalanceDrafts(drafts);
   }, [members]);
 
   const paymentsByMember = useMemo(() => {
@@ -113,6 +118,22 @@ function Treasury() {
   const activeMembers = useMemo(() => members.filter((m) => m.active && !m.archived_at), [members]);
 
   const ledgerMembers = useMemo(() => members.filter((m) => !m.archived_at), [members]);
+
+  const sortedLedgerMembers = useMemo(() => {
+    return [...ledgerMembers].sort((a, b) => {
+      const aYears = getYearsSinceDate(a.full_patch_since);
+      const bYears = getYearsSinceDate(b.full_patch_since);
+
+      // Longest full-patch tenure first.
+      if (aYears !== null && bYears !== null && aYears !== bYears) {
+        return bYears - aYears;
+      }
+      if (aYears !== null && bYears === null) return -1;
+      if (aYears === null && bYears !== null) return 1;
+
+      return a.full_name.localeCompare(b.full_name);
+    });
+  }, [ledgerMembers]);
 
   function getMemberMonthStatus(member: MemberDirectoryRow, month: number): DuesStatus {
     const existing = paymentsByMember.get(member.id)?.get(month)?.status;
@@ -187,12 +208,18 @@ function Treasury() {
     }
   }
 
-  async function submitPriorBalance(memberId: string, value: string) {
-    const amount = Number(value);
-    if (Number.isNaN(amount)) return;
+  async function submitPriorBalance(memberId: string) {
+    const rawValue = priorBalanceDrafts[memberId] ?? "";
+    const amount = Number.parseFloat(rawValue);
+    if (Number.isNaN(amount)) {
+      setError("Prior balance must be a valid number.");
+      return;
+    }
+
     try {
       await setPriorBalanceByAdmin(memberId, amount);
       setPriorBalances((prev) => ({ ...prev, [memberId]: amount }));
+      setMembers((prev) => prev.map((member) => (member.id === memberId ? { ...member, prior_balance_due: amount } : member)));
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to update prior balance.");
     }
@@ -288,7 +315,7 @@ function Treasury() {
       {!isLoading && error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
 
       {!isLoading && !error ? (
-        ledgerMembers.length === 0 ? (
+        sortedLedgerMembers.length === 0 ? (
           <EmptyState title="No members" description="Add members first, then track dues here." />
         ) : (
           <Card>
@@ -313,7 +340,7 @@ function Treasury() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ledgerMembers.map((member, rowIndex) => {
+                  {sortedLedgerMembers.map((member, rowIndex) => {
                     const monthMap = paymentsByMember.get(member.id);
                     let yearlyDebt = 0;
                     for (let month = 1; month <= 12; month += 1) {
@@ -372,8 +399,20 @@ function Treasury() {
                               style={{ width: 96 }}
                               type="number"
                               step="0.01"
-                              defaultValue={priorBalances[member.id] ?? 0}
-                              onBlur={(event) => void submitPriorBalance(member.id, event.target.value)}
+                              value={priorBalanceDrafts[member.id] ?? "0"}
+                              onChange={(event) =>
+                                setPriorBalanceDrafts((prev) => ({
+                                  ...prev,
+                                  [member.id]: event.target.value,
+                                }))
+                              }
+                              onBlur={() => void submitPriorBalance(member.id)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  void submitPriorBalance(member.id);
+                                }
+                              }}
                             />
                           ) : (
                             <span>${(priorBalances[member.id] ?? 0).toFixed(2)}</span>
