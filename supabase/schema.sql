@@ -60,6 +60,7 @@ create table if not exists public.members (
   blood_type text,
   member_rank text not null check (member_rank in ('support', 'prospect', 'full_patch')),
   active boolean not null default true,
+  dues_mandatory boolean not null default true,
   -- Soft delete. Never hard-delete a member row — events, discipline
   -- records, and activity_log all reference members.id and would
   -- either cascade-destroy history or orphan on a hard delete.
@@ -370,6 +371,7 @@ returns table (
   nickname text,
   member_rank text,
   active boolean,
+  dues_mandatory boolean,
   city text,
   state text,
   photo_url text,
@@ -388,7 +390,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select id, full_name, nickname, member_rank, active, city, state, photo_url, birth_date, date_joined, full_patch_since, prior_balance_due, motorcycle_brand, motorcycle_model, motorcycle_color, motorcycle_year, motorcycle_plate
+  select id, full_name, nickname, member_rank, active, dues_mandatory, city, state, photo_url, birth_date, date_joined, full_patch_since, prior_balance_due, motorcycle_brand, motorcycle_model, motorcycle_color, motorcycle_year, motorcycle_plate
   from public.members
   where archived_at is null;
 $$;

@@ -16,6 +16,7 @@ export interface MemberDirectoryRow {
   nickname: string | null;
   member_rank: Member["member_rank"];
   active: boolean;
+  dues_mandatory: boolean;
   city: string | null;
   state: string | null;
   photo_url: string | null;

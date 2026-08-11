@@ -54,3 +54,8 @@ export async function setPriorBalanceByAdmin(memberId: string, amount: number): 
   const { error } = await supabase.from("members").update({ prior_balance_due: amount }).eq("id", memberId);
   if (error) throw new Error(error.message);
 }
+
+export async function setDuesMandatoryByAdmin(memberId: string, duesMandatory: boolean): Promise<void> {
+  const { error } = await supabase.from("members").update({ dues_mandatory: duesMandatory }).eq("id", memberId);
+  if (error) throw new Error(error.message);
+}

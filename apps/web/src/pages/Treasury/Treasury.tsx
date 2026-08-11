@@ -18,6 +18,7 @@ import { listMembersDirectory, listMembersForAdmin } from "../../services/member
 import {
   getMonthlyDuesAmount,
   listDuesPaymentsForYear,
+  setDuesMandatoryByAdmin,
   setMonthlyDuesAmountByAdmin,
   setPriorBalanceByAdmin,
   upsertDuesCellByAdmin,
@@ -39,7 +40,7 @@ function statusLabel(status: DuesStatus, amount: number | null) {
   if (status === "na") return "N/A";
   if (status === "opt") return "OPT";
   if (status === "out") return "OUT";
-  return "\u2014";
+  return "DUE";
 }
 
 interface EditingCell {
@@ -111,22 +112,34 @@ function Treasury() {
 
   const activeMembers = useMemo(() => members.filter((m) => m.active && !m.archived_at), [members]);
 
+  const ledgerMembers = useMemo(() => members.filter((m) => !m.archived_at), [members]);
+
+  function getMemberMonthStatus(member: MemberDirectoryRow, month: number): DuesStatus {
+    const existing = paymentsByMember.get(member.id)?.get(month)?.status;
+    if (existing) return existing;
+    return member.dues_mandatory ? "unpaid" : "opt";
+  }
+
   const summary = useMemo(() => {
     let outstandingYear = 0;
     let paidInFull = 0;
+    let mandatoryMembers = 0;
 
     for (const member of activeMembers) {
+      if (member.dues_mandatory) mandatoryMembers += 1;
       const monthMap = paymentsByMember.get(member.id);
       let memberUnpaidMonths = 0;
 
       for (let month = 1; month <= 12; month += 1) {
-        const status = monthMap?.get(month)?.status ?? "unpaid";
+        const status = monthMap?.get(month)?.status ?? (member.dues_mandatory ? "unpaid" : "opt");
         if (status === "unpaid") memberUnpaidMonths += 1;
       }
 
-      outstandingYear += memberUnpaidMonths * duesAmount;
+      if (member.dues_mandatory) {
+        outstandingYear += memberUnpaidMonths * duesAmount;
+      }
       const prior = priorBalances[member.id] ?? 0;
-      if (memberUnpaidMonths === 0 && prior === 0) paidInFull += 1;
+      if (member.dues_mandatory && memberUnpaidMonths === 0 && prior === 0) paidInFull += 1;
     }
 
     const outstandingTotal =
@@ -134,6 +147,8 @@ function Treasury() {
 
     return {
       activeCount: activeMembers.length,
+      mandatoryMembers,
+      optionalMembers: Math.max(activeMembers.length - mandatoryMembers, 0),
       outstandingYear,
       outstandingTotal,
       paidInFull,
@@ -144,7 +159,8 @@ function Treasury() {
     if (!isAdmin) return;
     const existing = paymentsByMember.get(memberId)?.get(month);
     setEditingCell({ memberId, memberName, month });
-    setCellStatus(existing?.status ?? "paid");
+    const member = members.find((row) => row.id === memberId);
+    setCellStatus(existing?.status ?? (member?.dues_mandatory ? "paid" : "opt"));
     setCellAmount(existing?.amount != null ? String(existing.amount) : String(duesAmount));
   }
 
@@ -198,11 +214,21 @@ function Treasury() {
     }
   }
 
+  async function handleDuesMandatoryChange(memberId: string, isMandatory: boolean) {
+    if (!isAdmin) return;
+    try {
+      await setDuesMandatoryByAdmin(memberId, isMandatory);
+      setMembers((prev) => prev.map((member) => (member.id === memberId ? { ...member, dues_mandatory: isMandatory } : member)));
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to update mandatory dues setting.");
+    }
+  }
+
   return (
     <div className="stack-xl">
       <PageHeader
-        title="Treasury"
-        subtitle={`Dues ledger · ${year} · $${duesAmount.toFixed(2)} / month`}
+        title="Treasury Ledger"
+        subtitle={`${year} monthly contributions · $${duesAmount.toFixed(2)} / member / month`}
         actions={
           <div className="page-header-actions">
             <Select value={String(year)} onChange={(event) => setYear(Number(event.target.value))}>
@@ -229,10 +255,19 @@ function Treasury() {
       />
 
       <Card>
+        <div className="treasury-summary-label">Summary</div>
         <div className="stats-grid">
           <div className="stat-card accent-neutral">
             <p className="stat-title">Active Members</p>
             <p className="stat-value">{summary.activeCount}</p>
+          </div>
+          <div className="stat-card accent-blue">
+            <p className="stat-title">Mandatory Payers</p>
+            <p className="stat-value">{summary.mandatoryMembers}</p>
+          </div>
+          <div className="stat-card accent-green">
+            <p className="stat-title">Optional / Non-Mandatory</p>
+            <p className="stat-value">{summary.optionalMembers}</p>
           </div>
           <div className="stat-card accent-red">
             <p className="stat-title">Outstanding {year} Debt</p>
@@ -242,7 +277,7 @@ function Treasury() {
             <p className="stat-title">Outstanding Total Debt</p>
             <p className="stat-value">${summary.outstandingTotal.toFixed(2)}</p>
           </div>
-          <div className="stat-card accent-green">
+          <div className="stat-card accent-neutral">
             <p className="stat-title">Paid In Full ({year})</p>
             <p className="stat-value">{summary.paidInFull}</p>
           </div>
@@ -253,26 +288,41 @@ function Treasury() {
       {!isLoading && error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
 
       {!isLoading && !error ? (
-        members.length === 0 ? (
+        ledgerMembers.length === 0 ? (
           <EmptyState title="No members" description="Add members first, then track dues here." />
         ) : (
           <Card>
+            <div className="treasury-table-header">
+              <h2>Monthly Contributions - {year}</h2>
+              <p className="treasury-table-sub">
+                Every current member is listed automatically. Set a member to optional when they are not required to pay.
+              </p>
+            </div>
             <div className="table-wrap">
-              <table className="data-table">
+              <table className="data-table treasury-table">
                 <thead>
                   <tr>
+                    <th>#</th>
                     <th>Member</th>
                     {MONTHS.map((m) => (
                       <th key={m}>{m}</th>
                     ))}
+                    <th>Mandatory</th>
                     <th>Prior Balance</th>
+                    <th>{year} Debt</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {members.map((member) => {
+                  {ledgerMembers.map((member, rowIndex) => {
                     const monthMap = paymentsByMember.get(member.id);
+                    let yearlyDebt = 0;
+                    for (let month = 1; month <= 12; month += 1) {
+                      const status = getMemberMonthStatus(member, month);
+                      if (status === "unpaid" && member.dues_mandatory) yearlyDebt += duesAmount;
+                    }
                     return (
                       <tr key={member.id}>
+                        <td>{rowIndex + 1}</td>
                         <td>
                           <strong>{member.full_name}</strong>
                           {!member.active ? (
@@ -284,7 +334,7 @@ function Treasury() {
                         {MONTHS.map((_, idx) => {
                           const month = idx + 1;
                           const cell = monthMap?.get(month);
-                          const status = cell?.status ?? "unpaid";
+                          const status = getMemberMonthStatus(member, month);
                           return (
                             <td key={month}>
                               <button
@@ -301,6 +351,23 @@ function Treasury() {
                         })}
                         <td>
                           {isAdmin ? (
+                            <Select
+                              value={member.dues_mandatory ? "mandatory" : "optional"}
+                              onChange={(event) =>
+                                void handleDuesMandatoryChange(member.id, event.target.value === "mandatory")
+                              }
+                            >
+                              <option value="mandatory">Mandatory</option>
+                              <option value="optional">Optional</option>
+                            </Select>
+                          ) : (
+                            <Badge tone={member.dues_mandatory ? "warning" : "success"}>
+                              {member.dues_mandatory ? "Mandatory" : "Optional"}
+                            </Badge>
+                          )}
+                        </td>
+                        <td>
+                          {isAdmin ? (
                             <Input
                               style={{ width: 96 }}
                               type="number"
@@ -312,12 +379,18 @@ function Treasury() {
                             <span>${(priorBalances[member.id] ?? 0).toFixed(2)}</span>
                           )}
                         </td>
+                        <td>
+                          <strong>${yearlyDebt.toFixed(2)}</strong>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
+            <p className="table-subtext" style={{ marginTop: 12 }}>
+              Legend: PAID = payment recorded, DUE = mandatory and unpaid, OPT = optional contribution, N/A = not applicable, OUT = out.
+            </p>
           </Card>
         )
       ) : null}

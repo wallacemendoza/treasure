@@ -24,6 +24,7 @@ export interface Member {
 
   member_rank: MemberRank;
   active: boolean;
+  dues_mandatory: boolean;
   archived_at: string | null;
 
   birth_date: string | null;
