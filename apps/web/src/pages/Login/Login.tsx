@@ -38,7 +38,9 @@ function Login() {
         <div className="login-brand">
           <img className="login-logo" src={treasureLogo} alt="Treasure USA Chapter logo" />
           <div>
-            <h1 className="login-title">BALAIOS MC</h1>
+            <h1 className="login-title">
+              <span className="login-title-accent">BALAIOS</span> MC
+            </h1>
             <p className="login-chapter">USA CHAPTER</p>
             <p className="login-subtitle">Chapter Management Portal</p>
           </div>

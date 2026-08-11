@@ -1747,6 +1747,11 @@ a {
   text-shadow: 0 0 22px rgba(232, 198, 90, 0.2);
 }
 
+.login-title-accent {
+  color: #c62228;
+  text-shadow: 0 0 18px rgba(198, 34, 40, 0.35);
+}
+
 .login-logo {
   width: 68px;
   height: 68px;
