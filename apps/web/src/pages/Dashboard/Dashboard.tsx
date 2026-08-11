@@ -93,9 +93,9 @@ function Dashboard() {
       <section className="stats-grid" aria-label="Dashboard counts">
         {[
           { title: "Total Active Members", value: counts?.active_members ?? 0, accent: "blue" as const, icon: <IconUsers /> },
-          { title: "Full Patch", value: counts?.full_patch ?? 0, accent: "orange" as const, icon: <IconPatch /> },
+          { title: "Full Patches", value: counts?.full_patch ?? 0, accent: "orange" as const, icon: <IconPatch /> },
           { title: "Prospects", value: counts?.prospects ?? 0, accent: "blue" as const, icon: <IconProspect /> },
-          { title: "Support", value: counts?.support ?? 0, accent: "neutral" as const, icon: <IconSupport /> },
+          { title: "Supports", value: counts?.support ?? 0, accent: "neutral" as const, icon: <IconSupport /> },
           { title: "Currently Suspended", value: counts?.suspended ?? 0, accent: "red" as const, icon: <IconAlert /> },
           { title: "Currently On Leave", value: counts?.on_leave ?? 0, accent: "orange" as const, icon: <IconPause /> },
           { title: "Upcoming Events", value: counts?.upcoming_events ?? 0, accent: "blue" as const, icon: <IconCalendar /> },

@@ -46,7 +46,10 @@ export function IconProspect(props: IconProps) {
 export function IconSupport(props: IconProps) {
   return (
     <svg {...base} {...props}>
-      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z" />
+      <path d="M11 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+      <path d="M13.5 14H9a4 4 0 0 0-4 4v1h13v-1a4 4 0 0 0-3-3.87" />
+      <path d="M16 8a3 3 0 1 1 0 6" />
+      <path d="M18 14h.5A3.5 3.5 0 0 1 22 17.5V19h-2" />
     </svg>
   );
 }
