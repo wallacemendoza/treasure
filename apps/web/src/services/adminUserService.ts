@@ -11,8 +11,19 @@ export interface CreateUserPayload {
 }
 
 export async function createUserByAdmin(payload: CreateUserPayload): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Your session is missing or expired. Sign out and sign in again.");
+  }
+
   const { data, error } = await supabase.functions.invoke("admin-create-user", {
     body: payload,
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
   });
 
   if (error) {
@@ -57,7 +68,9 @@ export async function createUserByAdmin(payload: CreateUserPayload): Promise<voi
       }
 
       if (maybeResponse.status === 401 || maybeResponse.status === 403) {
-        throw new Error("Your session is not authorized for this action. Sign out and sign in again, then retry.");
+        throw new Error(
+          "Your session is not authorized for this action. Sign out and sign in again. If it still fails, your app may be pointed to a different Supabase project.",
+        );
       }
     }
 
