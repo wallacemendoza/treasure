@@ -1109,6 +1109,37 @@ a {
   margin-bottom: var(--space-3);
 }
 
+/* ── Treasury Balance Hero ── */
+.treasury-balance-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-8) calc(var(--space-8) * 1.5);
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.15) 0%, rgba(201, 162, 39, 0.05) 60%, transparent 100%);
+  border: 2px solid var(--gold);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 48px rgba(201, 162, 39, 0.12), inset 0 1px 0 rgba(201, 162, 39, 0.1);
+}
+
+.treasury-balance-label {
+  font-family: "Courier Prime", monospace;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--gold-light);
+  margin-bottom: var(--space-2);
+}
+
+.treasury-balance-amount {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 5rem;
+  line-height: 1;
+  color: var(--gold-bright);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 40px rgba(232, 198, 90, 0.5), 0 0 80px rgba(232, 198, 90, 0.2);
+}
+
 /* ── Treasury Dashboard ── */
 .treas-dash-stats {
   display: grid;
