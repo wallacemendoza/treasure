@@ -160,7 +160,7 @@ function Treasury() {
       const monthMap = paymentsByMember.get(member.id);
       let memberUnpaidMonths = 0;
 
-      for (let month = 1; month <= 12; month += 1) {
+      for (let month = 1; month <= currentMonth; month += 1) {
         const status = monthMap?.get(month)?.status ?? (member.dues_mandatory ? "unpaid" : "opt");
         if (status === "unpaid") memberUnpaidMonths += 1;
       }
@@ -183,7 +183,7 @@ function Treasury() {
       outstandingTotal,
       paidInFull,
     };
-  }, [activeMembers, duesAmount, paymentsByMember, priorBalances]);
+  }, [activeMembers, currentMonth, duesAmount, paymentsByMember, priorBalances]);
 
   const monthlyBreakdown = useMemo(() => {
     return MONTHS.map((label, idx) => {
@@ -229,7 +229,7 @@ function Treasury() {
       .map((member) => {
         const monthMap = paymentsByMember.get(member.id);
         let unpaidMonths = 0;
-        for (let month = 1; month <= 12; month += 1) {
+        for (let month = 1; month <= currentMonth; month += 1) {
           const status = monthMap?.get(month)?.status ?? "unpaid";
           if (status === "unpaid") unpaidMonths += 1;
         }
@@ -240,7 +240,7 @@ function Treasury() {
       .filter((m) => m.totalOwed > 0)
       .sort((a, b) => b.totalOwed - a.totalOwed)
       .slice(0, 6);
-  }, [activeMembers, paymentsByMember, duesAmount, priorBalances]);
+  }, [activeMembers, currentMonth, paymentsByMember, duesAmount, priorBalances]);
 
   function openCell(memberId: string, memberName: string, month: number) {
     if (!isAdmin) return;
@@ -492,7 +492,7 @@ function Treasury() {
                   {sortedLedgerMembers.map((member, rowIndex) => {
                     const monthMap = paymentsByMember.get(member.id);
                     let yearlyDebt = 0;
-                    for (let month = 1; month <= 12; month += 1) {
+                    for (let month = 1; month <= currentMonth; month += 1) {
                       const status = getMemberMonthStatus(member, month);
                       if (status === "unpaid" && member.dues_mandatory) yearlyDebt += duesAmount;
                     }
