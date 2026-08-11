@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       .eq("id", callerData.user.id)
       .maybeSingle();
 
-    if (profileError || !callerProfile || callerProfile.access_role !== "admin" || !callerProfile.login_enabled) {
+    if (profileError || !callerProfile || callerProfile.access_role !== "admin") {
       return json({ error: "Only admins can create users." }, 403);
     }
 
