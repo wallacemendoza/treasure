@@ -28,6 +28,28 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function extractProjectRefFromSupabaseUrl(url: string): string | null {
+  try {
+    const host = new URL(url).hostname;
+    return host.split(".")[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+function extractProjectRefFromJwt(token: string): string | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payload = JSON.parse(atob(parts[1])) as { iss?: string };
+    if (!payload.iss) return null;
+    const host = new URL(payload.iss).hostname;
+    return host.split(".")[0] || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     if (req.method === "OPTIONS") {
@@ -51,6 +73,17 @@ Deno.serve(async (req) => {
       return json({ error: "Function configuration is incomplete (missing Supabase env vars)." }, 500);
     }
 
+    const functionProjectRef = extractProjectRefFromSupabaseUrl(supabaseUrl);
+    const tokenProjectRef = extractProjectRefFromJwt(callerToken);
+    if (functionProjectRef && tokenProjectRef && functionProjectRef !== tokenProjectRef) {
+      return json(
+        {
+          error: `Session/project mismatch. Your app session belongs to project '${tokenProjectRef}', but this function is deployed on '${functionProjectRef}'. Update app Supabase URL/anon key to match.`,
+        },
+        401,
+      );
+    }
+
     // Identify the caller using their own token against the anon
     // client — this never uses the service role to impersonate them.
     const callerClient = createClient(supabaseUrl, anonKey, {
@@ -58,7 +91,7 @@ Deno.serve(async (req) => {
     });
     const { data: callerData, error: callerError } = await callerClient.auth.getUser();
     if (callerError || !callerData?.user) {
-      return json({ error: "Invalid session." }, 401);
+      return json({ error: callerError?.message ?? "Invalid session." }, 401);
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -72,7 +105,16 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (profileError || !callerProfile || callerProfile.access_role !== "admin") {
-      return json({ error: "Only admins can create users." }, 403);
+      return json(
+        {
+          error: profileError
+            ? profileError.message
+            : !callerProfile
+              ? "No profile row found for the signed-in user."
+              : `Only admins can create users (current role: ${callerProfile.access_role}).`,
+        },
+        403,
+      );
     }
 
     let body: {

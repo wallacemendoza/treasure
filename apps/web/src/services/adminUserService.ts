@@ -42,7 +42,7 @@ export async function createUserByAdmin(payload: CreateUserPayload): Promise<voi
         try {
           const body = (await maybeResponse.json()) as { error?: string; message?: string };
           if (body?.error || body?.message) {
-            throw new Error(body.error ?? body.message ?? error.message);
+            return Promise.reject(new Error(body.error ?? body.message ?? error.message));
           }
         } catch {
           // Fall through to text parsing below.
@@ -56,10 +56,10 @@ export async function createUserByAdmin(payload: CreateUserPayload): Promise<voi
             try {
               const parsed = JSON.parse(raw) as { error?: string; message?: string };
               if (parsed?.error || parsed?.message) {
-                throw new Error(parsed.error ?? parsed.message ?? error.message);
+                return Promise.reject(new Error(parsed.error ?? parsed.message ?? error.message));
               }
             } catch {
-              throw new Error(raw);
+              return Promise.reject(new Error(raw));
             }
           }
         } catch {
