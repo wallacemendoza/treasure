@@ -94,11 +94,9 @@ Deno.serve(async (req) => {
       return json({ error: callerError?.message ?? "Invalid session." }, 401);
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
-
-    // Check the caller is actually an admin — service role bypasses
-    // RLS, so this is a real permission check, not a UI-only one.
-    const { data: callerProfile, error: profileError } = await adminClient
+    // Verify caller role using their own session. This avoids relying
+    // on service-role table grants just to read the caller's profile.
+    const { data: callerProfile, error: profileError } = await callerClient
       .from("profiles")
       .select("access_role, login_enabled")
       .eq("id", callerData.user.id)
@@ -148,6 +146,8 @@ Deno.serve(async (req) => {
       return json({ error: "Full name is required when creating a member roster entry." }, 400);
     }
 
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -159,16 +159,18 @@ Deno.serve(async (req) => {
       return json({ error: createError?.message ?? "Unable to create the user." }, 400);
     }
 
-    // The on_auth_user_created trigger already inserted a default
-    // profiles row (viewer, username derived from email). Set the
-    // real username and requested role now that we know them.
-    const { error: updateError } = await adminClient
-      .from("profiles")
-      .update({ username, access_role: accessRole })
-      .eq("id", created.user.id);
+    // For viewer accounts, the trigger + user_metadata already sets
+    // username and default role. Only perform an explicit update when
+    // promoting to admin.
+    if (accessRole === "admin") {
+      const { error: updateError } = await adminClient
+        .from("profiles")
+        .update({ username, access_role: accessRole })
+        .eq("id", created.user.id);
 
-    if (updateError) {
-      return json({ error: `User created, but profile setup failed: ${updateError.message}` }, 500);
+      if (updateError) {
+        return json({ error: `User created, but profile setup failed: ${updateError.message}` }, 500);
+      }
     }
 
     if (createMember) {
