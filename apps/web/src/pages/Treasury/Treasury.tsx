@@ -406,7 +406,7 @@ function Treasury() {
         <Card className="treas-monthly-card">
           <p className="treasury-summary-label">Monthly Collection — {year}</p>
           <div className="treas-month-list">
-            {monthlyBreakdown.map(({ label, month, collected, expected, rate, paidCount, unpaidCount }) => {
+            {monthlyBreakdown.map(({ label, month, collected, rate, paidCount, unpaidCount }) => {
               const isFuture = month > currentMonth;
               return (
                 <div key={month} className={`treas-month-row${month === currentMonth ? " treas-month-current" : ""}${isFuture ? " treas-month-future" : ""}`}>
