@@ -1790,6 +1790,41 @@ a {
     width: 280px;
     min-height: 214px;
   }
+
+  .treasury-balance-hero {
+    padding: var(--space-6) var(--space-5);
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .treasury-balance-amount {
+    font-size: 3.4rem;
+  }
+
+  .treas-dash-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .treas-stat-card {
+    padding: var(--space-4);
+  }
+
+  .treas-stat-value {
+    font-size: 1.6rem;
+  }
+
+  .treas-dash-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .treas-month-row {
+    grid-template-columns: 32px 1fr 42px;
+  }
+
+  .treas-month-amt,
+  .treas-month-counts {
+    display: none;
+  }
 }
 
 @media (max-width: 560px) {
@@ -1814,5 +1849,37 @@ a {
     width: 100%;
     aspect-ratio: auto;
     min-height: 0;
+  }
+
+  .treasury-balance-hero {
+    padding: var(--space-5) var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .treasury-balance-amount {
+    font-size: 2.9rem;
+  }
+
+  .treasury-balance-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+  }
+
+  .treas-dash-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .treas-month-row {
+    padding: 5px var(--space-2);
+    gap: var(--space-2);
+  }
+
+  .treas-month-label,
+  .treas-month-pct {
+    font-size: 0.7rem;
+  }
+
+  .treas-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
