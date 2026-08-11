@@ -1,6 +1,7 @@
 import type { PropsWithChildren, ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import { Card } from "./primitives";
+import { useCountUp } from "../../hooks/useCountUp";
 
 export function PageHeader({
   title,
@@ -22,11 +23,30 @@ export function PageHeader({
   );
 }
 
-export function StatCard({ title, value, accent = "neutral" }: { title: string; value: number | string; accent?: "neutral" | "blue" | "green" | "orange" | "red" }) {
+export function StatCard({
+  title,
+  value,
+  accent = "neutral",
+  icon,
+}: {
+  title: string;
+  value: number | string;
+  accent?: "neutral" | "blue" | "green" | "orange" | "red";
+  icon?: ReactNode;
+}) {
+  const numericValue = typeof value === "number" ? value : Number(value);
+  const isAnimatable = typeof value === "number" && Number.isFinite(numericValue);
+  const animated = useCountUp(isAnimatable ? numericValue : 0);
+
   return (
     <Card className={cn("stat-card", `accent-${accent}`)}>
-      <p className="stat-title">{title}</p>
-      <p className="stat-value">{value}</p>
+      <div className="stat-card-row">
+        <div>
+          <p className="stat-title">{title}</p>
+          <p className="stat-value">{isAnimatable ? animated : value}</p>
+        </div>
+        {icon ? <span className={cn("stat-icon", `stat-icon-${accent}`)}>{icon}</span> : null}
+      </div>
     </Card>
   );
 }

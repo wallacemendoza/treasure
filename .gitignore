@@ -13,6 +13,7 @@ apps/web/.vercel
 
 # shared package build output
 packages/shared/dist
+*.tsbuildinfo
 
 # mobile / Expo
 apps/mobile/.expo
@@ -26,7 +27,7 @@ apps/mobile/*.key
 apps/mobile/*.mobileprovision
 apps/mobile/*.orig.*
 
-# native build artifacts (if prebuild/eject is ever run)
+# native build artifacts
 apps/mobile/ios
 apps/mobile/android
 

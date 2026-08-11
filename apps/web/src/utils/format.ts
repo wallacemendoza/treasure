@@ -82,3 +82,32 @@ export function toTitleCase(value: string) {
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(" ");
 }
+
+const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+  ["year", 60 * 60 * 24 * 365],
+  ["month", 60 * 60 * 24 * 30],
+  ["week", 60 * 60 * 24 * 7],
+  ["day", 60 * 60 * 24],
+  ["hour", 60 * 60],
+  ["minute", 60],
+];
+
+const RELATIVE_FORMATTER = new Intl.RelativeTimeFormat("en-US", { numeric: "auto" });
+
+export function formatRelativeTime(value: string | null | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  const seconds = (date.getTime() - Date.now()) / 1000;
+
+  if (Math.abs(seconds) < 45) return "just now";
+
+  for (const [unit, unitSeconds] of RELATIVE_UNITS) {
+    if (Math.abs(seconds) >= unitSeconds) {
+      return RELATIVE_FORMATTER.format(Math.round(seconds / unitSeconds), unit);
+    }
+  }
+
+  return RELATIVE_FORMATTER.format(Math.round(seconds), "second");
+}

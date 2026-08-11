@@ -532,6 +532,13 @@ a {
 .stat-card {
   position: relative;
   overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(201, 162, 39, 0.45);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
 }
 
 .stat-card::after {
@@ -542,6 +549,276 @@ a {
   top: 0;
   height: 2px;
   opacity: 0.9;
+}
+
+.stat-card-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.stat-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.stat-icon-neutral {
+  background: rgba(125, 113, 96, 0.16);
+  color: var(--text-muted);
+}
+
+.stat-icon-blue {
+  background: rgba(185, 28, 28, 0.14);
+  color: var(--blue);
+}
+
+.stat-icon-green {
+  background: rgba(122, 156, 63, 0.16);
+  color: var(--success);
+}
+
+.stat-icon-orange {
+  background: rgba(201, 162, 39, 0.16);
+  color: var(--gold);
+}
+
+.stat-icon-red {
+  background: rgba(224, 72, 63, 0.16);
+  color: var(--danger);
+}
+
+.stat-card-enter {
+  animation: statCardIn 420ms ease both;
+}
+
+@keyframes statCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-lower-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 900px) {
+  .dashboard-lower-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.donut-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.donut-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.donut-svg circle {
+  transition: stroke-dasharray 700ms ease;
+}
+
+.donut-segment {
+  animation: donutIn 900ms ease both;
+}
+
+@keyframes donutIn {
+  from {
+    stroke-dasharray: 0 9999;
+  }
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.donut-center-value {
+  font-family: "Bebas Neue", "Oswald", sans-serif;
+  font-size: 1.8rem;
+  color: var(--text-strong);
+  line-height: 1;
+}
+
+.donut-center-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 180px;
+}
+
+.donut-legend-item {
+  display: grid;
+  grid-template-columns: 10px 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+}
+
+.donut-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.donut-legend-label {
+  color: var(--text-primary);
+}
+
+.donut-legend-value {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.donut-legend-pct {
+  color: var(--text-subtle);
+  font-size: 0.75rem;
+  min-width: 34px;
+  text-align: right;
+}
+
+.progress-row {
+  display: grid;
+  gap: 6px;
+}
+
+.progress-row-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.progress-row-value {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 700ms ease;
+}
+
+.activity-item-main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.activity-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.activity-icon-neutral {
+  background: rgba(125, 113, 96, 0.16);
+  color: var(--text-muted);
+}
+
+.activity-icon-blue {
+  background: rgba(185, 28, 28, 0.14);
+  color: var(--blue);
+}
+
+.activity-icon-green {
+  background: rgba(122, 156, 63, 0.16);
+  color: var(--success);
+}
+
+.activity-icon-orange {
+  background: rgba(201, 162, 39, 0.16);
+  color: var(--gold);
+}
+
+.activity-icon-red {
+  background: rgba(224, 72, 63, 0.16);
+  color: var(--danger);
+}
+
+.activity-item {
+  transition: background 150ms ease;
+  border-radius: var(--radius-sm);
+}
+
+.activity-item:hover {
+  background: var(--bg-hover);
+}
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.skeleton-line {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-surface-alt) 50%, var(--bg-hover) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-line-sm {
+  height: 10px;
+  width: 60%;
+}
+
+.skeleton-line-lg {
+  height: 26px;
+  width: 40%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .accent-neutral::after {
@@ -671,21 +948,6 @@ a {
   text-align: left;
   cursor: pointer;
   flex: 1;
-}
-
-.member-card-side {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-.avatar-card {
-  width: 80px;
-  height: 80px;
-  flex-shrink: 0;
-  border: 2px solid var(--border);
 }
 
 .member-card-body-button {
@@ -828,36 +1090,6 @@ a {
   letter-spacing: 0.14em;
   color: var(--gold-light);
   margin-bottom: var(--space-3);
-}
-
-.treasury-balance-hero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-6);
-  padding: var(--space-6) var(--space-8);
-  background: linear-gradient(135deg, rgba(201, 162, 39, 0.12) 0%, rgba(201, 162, 39, 0.04) 60%, transparent 100%);
-  border: 1.5px solid var(--gold);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 0 32px rgba(201, 162, 39, 0.08);
-}
-
-.treasury-balance-label {
-  font-family: "Courier Prime", monospace;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--gold-light);
-  margin-bottom: var(--space-2);
-}
-
-.treasury-balance-amount {
-  font-family: "Bebas Neue", sans-serif;
-  font-size: 3.5rem;
-  line-height: 1;
-  color: var(--gold-bright);
-  letter-spacing: 0.04em;
-  text-shadow: 0 0 24px rgba(232, 198, 90, 0.35);
 }
 
 .treasury-table-header {
