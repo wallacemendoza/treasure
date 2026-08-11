@@ -1,5 +1,11 @@
 ﻿@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600;700&family=Courier+Prime:wght@400;700&family=Fjalla+One&display=swap");
 
+@font-face {
+  font-family: "Flash D Bold";
+  src: local("Flash D Bold"), local("FlashDBol-Regular"), url("/fonts/FlashDBol-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
 :root {
   /* Balaios MC USA palette — matched to the club's treasury ledger:
      near-black ground, crimson accents, brass/gold headers, olive
@@ -1732,7 +1738,7 @@ a {
 
 .login-title {
   margin: 0;
-  font-family: "Fjalla One", "Bebas Neue", sans-serif;
+  font-family: "Flash D Bold", "Fjalla One", "Bebas Neue", sans-serif;
   font-size: clamp(2.2rem, 5vw, 3rem);
   line-height: 0.95;
   letter-spacing: 0.08em;
