@@ -56,7 +56,8 @@ function Treasury() {
   const { role } = useAuth();
   const isAdmin = role === "admin";
 
-  const [year, setYear] = useState(new Date().getFullYear());
+  const year = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
   const [members, setMembers] = useState<MemberDirectoryRow[]>([]);
   const [duesAmount, setDuesAmount] = useState(30);
   const [payments, setPayments] = useState<DuesPayment[]>([]);
@@ -97,7 +98,7 @@ function Treasury() {
     } finally {
       setIsLoading(false);
     }
-  }, [isAdmin, year]);
+  }, [isAdmin]);
 
   useEffect(() => {
     void load();
@@ -183,6 +184,63 @@ function Treasury() {
       paidInFull,
     };
   }, [activeMembers, duesAmount, paymentsByMember, priorBalances]);
+
+  const monthlyBreakdown = useMemo(() => {
+    return MONTHS.map((label, idx) => {
+      const month = idx + 1;
+      let collected = 0;
+      let expected = 0;
+      let paidCount = 0;
+      let unpaidCount = 0;
+
+      for (const member of activeMembers) {
+        if (!member.dues_mandatory) continue;
+        expected += duesAmount;
+        const cell = paymentsByMember.get(member.id)?.get(month);
+        const status = cell?.status ?? "unpaid";
+        if (status === "paid") {
+          collected += cell?.amount ?? duesAmount;
+          paidCount += 1;
+        } else if (status === "unpaid") {
+          unpaidCount += 1;
+        }
+      }
+
+      const rate = expected > 0 ? Math.round((collected / expected) * 100) : 0;
+      return { label, month, collected, expected, rate, paidCount, unpaidCount };
+    });
+  }, [activeMembers, paymentsByMember, duesAmount]);
+
+  const dashboardStats = useMemo(() => {
+    let collectedThisYear = 0;
+    const expectedToDate = summary.mandatoryMembers * currentMonth * duesAmount;
+
+    for (const month of monthlyBreakdown) {
+      collectedThisYear += month.collected;
+    }
+
+    const collectionRate = expectedToDate > 0 ? Math.min(100, Math.round((collectedThisYear / expectedToDate) * 100)) : 0;
+    return { collectedThisYear, expectedToDate, collectionRate };
+  }, [summary.mandatoryMembers, currentMonth, duesAmount, monthlyBreakdown]);
+
+  const topDebtors = useMemo(() => {
+    return activeMembers
+      .filter((m) => m.dues_mandatory)
+      .map((member) => {
+        const monthMap = paymentsByMember.get(member.id);
+        let unpaidMonths = 0;
+        for (let month = 1; month <= 12; month += 1) {
+          const status = monthMap?.get(month)?.status ?? "unpaid";
+          if (status === "unpaid") unpaidMonths += 1;
+        }
+        const prior = priorBalances[member.id] ?? 0;
+        const totalOwed = unpaidMonths * duesAmount + prior;
+        return { ...member, unpaidMonths, totalOwed, prior };
+      })
+      .filter((m) => m.totalOwed > 0)
+      .sort((a, b) => b.totalOwed - a.totalOwed)
+      .slice(0, 6);
+  }, [activeMembers, paymentsByMember, duesAmount, priorBalances]);
 
   function openCell(memberId: string, memberName: string, month: number) {
     if (!isAdmin) return;
@@ -298,61 +356,109 @@ function Treasury() {
 
       <PageHeader
         title="Treasury Ledger"
-        subtitle={`${year} monthly contributions · $${duesAmount.toFixed(2)} / member / month`}
+        subtitle={`${year} · $${duesAmount.toFixed(2)} / member / month`}
         actions={
-          <div className="page-header-actions">
-            <Select value={String(year)} onChange={(event) => setYear(Number(event.target.value))}>
-              {[year - 1, year, year + 1].map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </Select>
-            {isAdmin ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setDuesSettingInput(String(duesAmount));
-                  setShowDuesSettingModal(true);
-                }}
-              >
-                Set Dues Amount
-              </Button>
-            ) : null}
-          </div>
+          isAdmin ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setDuesSettingInput(String(duesAmount));
+                setShowDuesSettingModal(true);
+              }}
+            >
+              Set Dues Amount
+            </Button>
+          ) : null
         }
       />
 
-      <Card>
-        <div className="treasury-summary-label">Summary</div>
-        <div className="stats-grid">
-          <div className="stat-card accent-neutral">
-            <p className="stat-title">Active Members</p>
-            <p className="stat-value">{summary.activeCount}</p>
-          </div>
-          <div className="stat-card accent-blue">
-            <p className="stat-title">Mandatory Payers</p>
-            <p className="stat-value">{summary.mandatoryMembers}</p>
-          </div>
-          <div className="stat-card accent-green">
-            <p className="stat-title">Optional / Non-Mandatory</p>
-            <p className="stat-value">{summary.optionalMembers}</p>
-          </div>
-          <div className="stat-card accent-red">
-            <p className="stat-title">Outstanding {year} Debt</p>
-            <p className="stat-value">${summary.outstandingYear.toFixed(2)}</p>
-          </div>
-          <div className="stat-card accent-orange">
-            <p className="stat-title">Outstanding Total Debt</p>
-            <p className="stat-value">${summary.outstandingTotal.toFixed(2)}</p>
-          </div>
-          <div className="stat-card accent-neutral">
-            <p className="stat-title">Paid In Full ({year})</p>
-            <p className="stat-value">{summary.paidInFull}</p>
+      {/* ── Dashboard ── */}
+      <div className="treas-dash-stats">
+        <div className="treas-stat-card treas-stat-collected">
+          <p className="treas-stat-label">Collected {year}</p>
+          <p className="treas-stat-value">${dashboardStats.collectedThisYear.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </div>
+        <div className="treas-stat-card treas-stat-expected">
+          <p className="treas-stat-label">Expected to Date</p>
+          <p className="treas-stat-value">${dashboardStats.expectedToDate.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </div>
+        <div className="treas-stat-card treas-stat-outstanding">
+          <p className="treas-stat-label">Outstanding Total</p>
+          <p className="treas-stat-value treas-danger">${summary.outstandingTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </div>
+        <div className="treas-stat-card treas-stat-rate">
+          <p className="treas-stat-label">Collection Rate</p>
+          <div className="treas-rate-wrap">
+            <p className="treas-stat-value treas-rate-pct">{dashboardStats.collectionRate}%</p>
+            <div className="treas-rate-bar-bg">
+              <div className="treas-rate-bar-fill" style={{ width: `${dashboardStats.collectionRate}%` }} />
+            </div>
           </div>
         </div>
-      </Card>
+        <div className="treas-stat-card treas-stat-pif">
+          <p className="treas-stat-label">Paid in Full</p>
+          <p className="treas-stat-value">{summary.paidInFull} <span className="treas-stat-of">/ {summary.mandatoryMembers}</span></p>
+        </div>
+      </div>
+
+      <div className="treas-dash-lower">
+        <Card className="treas-monthly-card">
+          <p className="treasury-summary-label">Monthly Collection — {year}</p>
+          <div className="treas-month-list">
+            {monthlyBreakdown.map(({ label, month, collected, expected, rate, paidCount, unpaidCount }) => {
+              const isFuture = month > currentMonth;
+              return (
+                <div key={month} className={`treas-month-row${month === currentMonth ? " treas-month-current" : ""}${isFuture ? " treas-month-future" : ""}`}>
+                  <span className="treas-month-label">{label}</span>
+                  <div className="treas-month-bar-wrap">
+                    <div className="treas-month-bar-bg">
+                      <div className="treas-month-bar-fill" style={{ width: isFuture ? "0%" : `${rate}%` }} />
+                    </div>
+                  </div>
+                  <span className="treas-month-pct">{isFuture ? "—" : `${rate}%`}</span>
+                  <span className="treas-month-amt">
+                    {isFuture ? "" : `$${collected.toFixed(0)}`}
+                  </span>
+                  <span className="treas-month-counts">
+                    {isFuture ? "" : (
+                      <>
+                        <span className="treas-paid-pill">{paidCount} paid</span>
+                        {unpaidCount > 0 ? <span className="treas-unpaid-pill">{unpaidCount} due</span> : null}
+                      </>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card className="treas-attention-card">
+          <p className="treasury-summary-label">Needs Attention</p>
+          {topDebtors.length === 0 ? (
+            <div className="treas-all-clear">
+              <span className="treas-all-clear-icon">✓</span>
+              <p>All mandatory members are current</p>
+            </div>
+          ) : (
+            <ul className="treas-debtor-list">
+              {topDebtors.map((member) => (
+                <li key={member.id} className="treas-debtor-row">
+                  <div className="treas-debtor-info">
+                    <span className="treas-debtor-name">{member.full_name}</span>
+                    <span className="treas-debtor-detail">
+                      {member.unpaidMonths > 0 ? `${member.unpaidMonths} mo unpaid` : ""}
+                      {member.prior > 0 ? `${member.unpaidMonths > 0 ? " · " : ""}prior $${member.prior.toFixed(0)}` : ""}
+                    </span>
+                  </div>
+                  <span className="treas-debtor-amount">${member.totalOwed.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
 
       {isLoading ? <LoadingSpinner label="Loading treasury data..." /> : null}
       {!isLoading && error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
