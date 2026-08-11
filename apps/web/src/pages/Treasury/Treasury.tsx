@@ -79,6 +79,8 @@ function Treasury() {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [balanceInput, setBalanceInput] = useState("0");
 
+  const [memberDebtDetail, setMemberDebtDetail] = useState<MemberDirectoryRow | null>(null);
+
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -483,8 +485,6 @@ function Treasury() {
                     {MONTHS.map((m) => (
                       <th key={m}>{m}</th>
                     ))}
-                    <th>Mandatory</th>
-                    <th>Prior Balance</th>
                     <th>{year} Debt</th>
                   </tr>
                 </thead>
@@ -500,12 +500,16 @@ function Treasury() {
                       <tr key={member.id}>
                         <td>{rowIndex + 1}</td>
                         <td>
-                          <strong>{member.full_name}</strong>
-                          {!member.active ? (
-                            <span style={{ marginLeft: 6 }}>
+                          <button
+                            type="button"
+                            className="treas-member-btn"
+                            onClick={() => setMemberDebtDetail(member)}
+                          >
+                            <strong>{member.nickname?.trim() || member.full_name}</strong>
+                            {!member.active ? (
                               <Badge tone="default">Inactive</Badge>
-                            </span>
-                          ) : null}
+                            ) : null}
+                          </button>
                         </td>
                         {MONTHS.map((_, idx) => {
                           const month = idx + 1;
@@ -525,48 +529,6 @@ function Treasury() {
                             </td>
                           );
                         })}
-                        <td>
-                          {isAdmin ? (
-                            <Select
-                              value={member.dues_mandatory ? "mandatory" : "optional"}
-                              onChange={(event) =>
-                                void handleDuesMandatoryChange(member.id, event.target.value === "mandatory")
-                              }
-                            >
-                              <option value="mandatory">Mandatory</option>
-                              <option value="optional">Optional</option>
-                            </Select>
-                          ) : (
-                            <Badge tone={member.dues_mandatory ? "warning" : "success"}>
-                              {member.dues_mandatory ? "Mandatory" : "Optional"}
-                            </Badge>
-                          )}
-                        </td>
-                        <td>
-                          {isAdmin ? (
-                            <Input
-                              style={{ width: 96 }}
-                              type="number"
-                              step="0.01"
-                              value={priorBalanceDrafts[member.id] ?? "0"}
-                              onChange={(event) =>
-                                setPriorBalanceDrafts((prev) => ({
-                                  ...prev,
-                                  [member.id]: event.target.value,
-                                }))
-                              }
-                              onBlur={() => void submitPriorBalance(member.id)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter") {
-                                  event.preventDefault();
-                                  void submitPriorBalance(member.id);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <span>${(priorBalances[member.id] ?? 0).toFixed(2)}</span>
-                          )}
-                        </td>
                         <td>
                           <strong>${yearlyDebt.toFixed(2)}</strong>
                         </td>
@@ -678,6 +640,83 @@ function Treasury() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Member debt detail modal */}
+      <Modal
+        open={Boolean(memberDebtDetail)}
+        title={memberDebtDetail ? (memberDebtDetail.nickname?.trim() || memberDebtDetail.full_name) : ""}
+        onClose={() => setMemberDebtDetail(null)}
+      >
+        {memberDebtDetail ? (() => {
+          const monthMap = paymentsByMember.get(memberDebtDetail.id);
+          let debt2026 = 0;
+          for (let month = 1; month <= currentMonth; month += 1) {
+            const status = monthMap?.get(month)?.status ?? (memberDebtDetail.dues_mandatory ? "unpaid" : "opt");
+            if (status === "unpaid" && memberDebtDetail.dues_mandatory) debt2026 += duesAmount;
+          }
+          const priorDebt = priorBalances[memberDebtDetail.id] ?? 0;
+          const totalDebt = debt2026 + priorDebt;
+
+          return (
+            <div className="treas-detail-modal">
+              <p className="treas-detail-fullname">{memberDebtDetail.full_name}</p>
+              <div className="treas-detail-grid">
+                <div className="treas-detail-stat">
+                  <p className="treas-detail-label">{year} Debt</p>
+                  <p className={`treas-detail-value${debt2026 > 0 ? " treas-danger" : " treas-ok"}`}>${debt2026.toFixed(2)}</p>
+                </div>
+                <div className="treas-detail-stat">
+                  <p className="treas-detail-label">Prior Balance</p>
+                  <p className={`treas-detail-value${priorDebt > 0 ? " treas-danger" : " treas-ok"}`}>${priorDebt.toFixed(2)}</p>
+                </div>
+                <div className="treas-detail-stat treas-detail-total">
+                  <p className="treas-detail-label">Total Owed</p>
+                  <p className={`treas-detail-value treas-detail-big${totalDebt > 0 ? " treas-danger" : " treas-ok"}`}>${totalDebt.toFixed(2)}</p>
+                </div>
+              </div>
+
+              {isAdmin ? (
+                <div className="treas-detail-admin stack-md" style={{ marginTop: 24 }}>
+                  <div>
+                    <label className="field-label">Dues Status</label>
+                    <Select
+                      value={memberDebtDetail.dues_mandatory ? "mandatory" : "optional"}
+                      onChange={(event) => {
+                        const isMandatory = event.target.value === "mandatory";
+                        void handleDuesMandatoryChange(memberDebtDetail.id, isMandatory);
+                        setMemberDebtDetail({ ...memberDebtDetail, dues_mandatory: isMandatory });
+                      }}
+                    >
+                      <option value="mandatory">Mandatory</option>
+                      <option value="optional">Optional</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="field-label">Prior Balance (USD)</label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={priorBalanceDrafts[memberDebtDetail.id] ?? "0"}
+                        onChange={(event) =>
+                          setPriorBalanceDrafts((prev) => ({ ...prev, [memberDebtDetail.id]: event.target.value }))
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => void submitPriorBalance(memberDebtDetail.id)}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          );
+        })() : null}
       </Modal>
     </div>
   );
