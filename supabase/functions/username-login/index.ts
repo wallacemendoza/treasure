@@ -58,20 +58,15 @@ Deno.serve(async (req) => {
   let email = normalizedIdentifier
 
   if (!normalizedIdentifier.includes('@')) {
-    // Service-role client: the only caller allowed to execute
-    // resolve_username_email (see supabase/schema.sql — the grant
-    // is service_role only, nothing else).
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
-    const { data, error } = await adminClient.rpc('resolve_username_email', {
-      lookup_username: normalizedIdentifier,
-    })
+    const resolvedEmail = await resolveEmailForIdentifier(adminClient, normalizedIdentifier)
 
-    if (error || !data) {
-      // Same shape as a wrong password below — no signal about
-      // whether the username existed.
+    if (!resolvedEmail) {
+      // Same shape as a wrong password below — no signal about whether
+      // the username existed.
       return json(GENERIC_ERROR, 401)
     }
-    email = data as string
+    email = resolvedEmail
   }
 
   const authClient = createClient(supabaseUrl, anonKey)
@@ -89,6 +84,40 @@ Deno.serve(async (req) => {
     refresh_token: signInData.session.refresh_token,
   })
 })
+
+async function resolveEmailForIdentifier(
+  adminClient: ReturnType<typeof createClient>,
+  identifier: string,
+): Promise<string | null> {
+  // First try the hardened RPC path (preferred when present).
+  const { data, error } = await adminClient.rpc('resolve_username_email', {
+    lookup_username: identifier,
+  })
+
+  if (!error && data) {
+    return String(data)
+  }
+
+  // Fallback: support environments where the RPC migration hasn't been
+  // applied yet by doing a direct profile lookup with service role.
+  const { data: profileRow, error: profileError } = await adminClient
+    .from('profiles')
+    .select('id, username, login_enabled')
+    .ilike('username', identifier)
+    .eq('login_enabled', true)
+    .maybeSingle()
+
+  if (profileError || !profileRow?.id) {
+    return null
+  }
+
+  const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(profileRow.id)
+  if (userError || !userData?.user?.email) {
+    return null
+  }
+
+  return userData.user.email
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
