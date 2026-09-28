@@ -39,3 +39,13 @@ export interface TreasuryLoan {
   created_at: string;
   updated_at: string;
 }
+
+export interface LoanPayment {
+  id: string;
+  loan_id: string;
+  payment_date: string;
+  amount: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}

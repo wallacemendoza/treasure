@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import type { DuesPayment, DuesStatus, TreasuryExpense, TreasuryLoan } from "@treasure/shared";
+import type { DuesPayment, DuesStatus, LoanPayment, TreasuryExpense, TreasuryLoan } from "@treasure/shared";
 import {
   Badge,
   Button,
@@ -18,12 +18,15 @@ import { listMembersDirectory, listMembersForAdmin } from "../../services/member
 import {
   createExpenseByAdmin,
   createLoanByAdmin,
+  createLoanPaymentByAdmin,
   deleteExpenseByAdmin,
   deleteLoanByAdmin,
+  deleteLoanPaymentByAdmin,
   getCurrentBalance,
   getMonthlyDuesAmount,
   listDuesPaymentsForYear,
   listExpenses,
+  listLoanPayments,
   listLoans,
   setCurrentBalanceByAdmin,
   setDuesMandatoryByAdmin,
@@ -101,19 +104,26 @@ function Treasury() {
   const [loanAmountInput, setLoanAmountInput] = useState("");
   const [loanNotesInput, setLoanNotesInput] = useState("");
 
+  const [loanPayments, setLoanPayments] = useState<LoanPayment[]>([]);
+  const [loanPaymentDetail, setLoanPaymentDetail] = useState<TreasuryLoan | null>(null);
+  const [paymentDateInput, setPaymentDateInput] = useState(() => new Date().toISOString().slice(0, 10));
+  const [paymentAmountInput, setPaymentAmountInput] = useState("");
+  const [paymentNotesInput, setPaymentNotesInput] = useState("");
+
   const [memberDebtDetail, setMemberDebtDetail] = useState<MemberDirectoryRow | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [memberRows, amount, duesRows, balance, expenseRows, loanRows] = await Promise.all([
+      const [memberRows, amount, duesRows, balance, expenseRows, loanRows, loanPaymentRows] = await Promise.all([
         isAdmin ? listMembersForAdmin(false) : listMembersDirectory(),
         getMonthlyDuesAmount(),
         listDuesPaymentsForYear(year),
         getCurrentBalance(),
         listExpenses(),
         listLoans(),
+        listLoanPayments(),
       ]);
       setMembers(memberRows);
       setDuesAmount(amount);
@@ -121,6 +131,7 @@ function Treasury() {
       setCurrentBalance(balance);
       setExpenses(expenseRows);
       setLoans(loanRows);
+      setLoanPayments(loanPaymentRows);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load treasury data.");
     } finally {
@@ -152,14 +163,33 @@ function Treasury() {
     return map;
   }, [payments]);
 
+  const paidByLoan = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const payment of loanPayments) {
+      map.set(payment.loan_id, (map.get(payment.loan_id) ?? 0) + payment.amount);
+    }
+    return map;
+  }, [loanPayments]);
+
+  const loanRemaining = useCallback(
+    (loan: TreasuryLoan) => {
+      if (loan.status === "repaid") return 0;
+      const paid = paidByLoan.get(loan.id) ?? 0;
+      return Math.max(0, loan.amount - paid);
+    },
+    [paidByLoan],
+  );
+
   const loansByMember = useMemo(() => {
     const map = new Map<string, number>();
     for (const loan of loans) {
-      if (loan.status !== "outstanding") continue;
-      map.set(loan.member_id, (map.get(loan.member_id) ?? 0) + loan.amount);
+      const remaining = loanRemaining(loan);
+      if (remaining > 0) {
+        map.set(loan.member_id, (map.get(loan.member_id) ?? 0) + remaining);
+      }
     }
     return map;
-  }, [loans]);
+  }, [loans, loanRemaining]);
 
   const activeMembers = useMemo(() => members.filter((m) => m.active && !m.archived_at), [members]);
 
@@ -416,8 +446,8 @@ function Treasury() {
   }
 
   const outstandingLoanTotal = useMemo(
-    () => loans.filter((loan) => loan.status === "outstanding").reduce((sum, loan) => sum + loan.amount, 0),
-    [loans],
+    () => loans.reduce((sum, loan) => sum + loanRemaining(loan), 0),
+    [loans, loanRemaining],
   );
 
   function memberLabel(memberId: string) {
@@ -473,8 +503,49 @@ function Treasury() {
     try {
       await deleteLoanByAdmin(loanId);
       setLoans((prev) => prev.filter((loan) => loan.id !== loanId));
+      setLoanPayments((prev) => prev.filter((payment) => payment.loan_id !== loanId));
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to delete that loan.");
+    }
+  }
+
+  function openLoanPaymentDetail(loan: TreasuryLoan) {
+    setPaymentDateInput(new Date().toISOString().slice(0, 10));
+    setPaymentAmountInput("");
+    setPaymentNotesInput("");
+    setLoanPaymentDetail(loan);
+  }
+
+  async function submitLoanPayment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!loanPaymentDetail) return;
+    const amount = Number(paymentAmountInput);
+    if (Number.isNaN(amount) || amount <= 0) return;
+    setIsSaving(true);
+    try {
+      await createLoanPaymentByAdmin({
+        loan_id: loanPaymentDetail.id,
+        payment_date: paymentDateInput,
+        amount,
+        notes: paymentNotesInput.trim() || null,
+      });
+      setPaymentAmountInput("");
+      setPaymentNotesInput("");
+      await load();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save that payment.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDeleteLoanPayment(paymentId: string) {
+    if (!isAdmin) return;
+    try {
+      await deleteLoanPaymentByAdmin(paymentId);
+      await load();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to delete that payment.");
     }
   }
 
@@ -694,6 +765,7 @@ function Treasury() {
                   <th>Reason</th>
                   <th>Notes</th>
                   <th>Amount</th>
+                  <th>Remaining</th>
                   <th>Status</th>
                   {isAdmin ? <th /> : null}
                 </tr>
@@ -706,6 +778,7 @@ function Treasury() {
                     <td>{loan.reason}</td>
                     <td>{loan.notes ?? ""}</td>
                     <td>${loan.amount.toFixed(2)}</td>
+                    <td>${loanRemaining(loan).toFixed(2)}</td>
                     <td>
                       <Badge tone={loan.status === "outstanding" ? "danger" : "success"}>
                         {loan.status === "outstanding" ? "Outstanding" : "Repaid"}
@@ -713,6 +786,9 @@ function Treasury() {
                     </td>
                     {isAdmin ? (
                       <td style={{ display: "flex", gap: 8 }}>
+                        <Button type="button" variant="secondary" onClick={() => openLoanPaymentDetail(loan)}>
+                          Payments
+                        </Button>
                         <Button type="button" variant="secondary" onClick={() => void handleToggleLoanStatus(loan)}>
                           {loan.status === "outstanding" ? "Mark Repaid" : "Mark Outstanding"}
                         </Button>
@@ -729,6 +805,7 @@ function Treasury() {
                   <td colSpan={4}>
                     <strong>Outstanding Total</strong>
                   </td>
+                  <td />
                   <td>
                     <strong>${outstandingLoanTotal.toFixed(2)}</strong>
                   </td>
@@ -1060,6 +1137,119 @@ function Treasury() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(loanPaymentDetail)}
+        title={loanPaymentDetail ? `Payments \u2014 ${memberLabel(loanPaymentDetail.member_id)}` : ""}
+        onClose={() => setLoanPaymentDetail(null)}
+      >
+        {loanPaymentDetail ? (() => {
+          const payments = loanPayments
+            .filter((payment) => payment.loan_id === loanPaymentDetail.id)
+            .sort((a, b) => b.payment_date.localeCompare(a.payment_date));
+          const remaining = loanRemaining(loanPaymentDetail);
+
+          return (
+            <div className="stack-md">
+              <div className="treas-detail-grid">
+                <div className="treas-detail-stat">
+                  <p className="treas-detail-label">Loan Amount</p>
+                  <p className="treas-detail-value">${loanPaymentDetail.amount.toFixed(2)}</p>
+                </div>
+                <div className="treas-detail-stat">
+                  <p className="treas-detail-label">Remaining</p>
+                  <p className={`treas-detail-value${remaining > 0 ? " treas-danger" : " treas-ok"}`}>${remaining.toFixed(2)}</p>
+                </div>
+              </div>
+
+              {payments.length === 0 ? (
+                <EmptyState title="No payments yet" description="Log an installment payment below." />
+              ) : (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Notes</th>
+                        {isAdmin ? <th /> : null}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((payment) => (
+                        <tr key={payment.id}>
+                          <td>{payment.payment_date}</td>
+                          <td>${payment.amount.toFixed(2)}</td>
+                          <td>{payment.notes ?? ""}</td>
+                          {isAdmin ? (
+                            <td>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => void handleDeleteLoanPayment(payment.id)}
+                              >
+                                Delete
+                              </Button>
+                            </td>
+                          ) : null}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {isAdmin && remaining > 0 ? (
+                <form className="stack-md" onSubmit={submitLoanPayment} style={{ marginTop: 8 }}>
+                  <div>
+                    <label className="field-label" htmlFor="payment_date">
+                      Date
+                    </label>
+                    <Input
+                      id="payment_date"
+                      type="date"
+                      value={paymentDateInput}
+                      onChange={(event) => setPaymentDateInput(event.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label" htmlFor="payment_amount">
+                      Amount
+                    </label>
+                    <Input
+                      id="payment_amount"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      max={remaining}
+                      value={paymentAmountInput}
+                      onChange={(event) => setPaymentAmountInput(event.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label" htmlFor="payment_notes">
+                      Notes (optional)
+                    </label>
+                    <Input
+                      id="payment_notes"
+                      type="text"
+                      value={paymentNotesInput}
+                      onChange={(event) => setPaymentNotesInput(event.target.value)}
+                    />
+                  </div>
+                  <div className="modal-footer">
+                    <Button type="submit" disabled={isSaving}>
+                      {isSaving ? "Saving..." : "Log Payment"}
+                    </Button>
+                  </div>
+                </form>
+              ) : null}
+            </div>
+          );
+        })() : null}
       </Modal>
 
       {/* Member debt detail modal */}
