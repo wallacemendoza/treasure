@@ -1,4 +1,4 @@
-import type { DuesPayment, DuesStatus } from "@treasure/shared";
+import type { DuesPayment, DuesStatus, TreasuryExpense } from "@treasure/shared";
 import { supabase } from "../lib/supabase";
 
 export async function getMonthlyDuesAmount(): Promise<number> {
@@ -77,5 +77,32 @@ export async function setCurrentBalanceByAdmin(amount: number): Promise<void> {
     .from("chapter_settings")
     .upsert({ key: "current_balance", value: amount });
 
+  if (error) throw new Error(error.message);
+}
+
+export async function listExpenses(): Promise<TreasuryExpense[]> {
+  const { data, error } = await supabase
+    .from("treasury_expenses")
+    .select("*")
+    .order("expense_date", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TreasuryExpense[];
+}
+
+export interface ExpensePayload {
+  expense_date: string;
+  reason: string;
+  amount: number;
+  notes: string | null;
+}
+
+export async function createExpenseByAdmin(payload: ExpensePayload): Promise<void> {
+  const { error } = await supabase.from("treasury_expenses").insert(payload);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteExpenseByAdmin(expenseId: string): Promise<void> {
+  const { error } = await supabase.from("treasury_expenses").delete().eq("id", expenseId);
   if (error) throw new Error(error.message);
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import type { DuesPayment, DuesStatus } from "@treasure/shared";
+import type { DuesPayment, DuesStatus, TreasuryExpense } from "@treasure/shared";
 import {
   Badge,
   Button,
@@ -16,9 +16,12 @@ import {
 import { useAuth } from "../../hooks/useAuth";
 import { listMembersDirectory, listMembersForAdmin } from "../../services/memberService";
 import {
+  createExpenseByAdmin,
+  deleteExpenseByAdmin,
   getCurrentBalance,
   getMonthlyDuesAmount,
   listDuesPaymentsForYear,
+  listExpenses,
   setCurrentBalanceByAdmin,
   setDuesMandatoryByAdmin,
   setMonthlyDuesAmountByAdmin,
@@ -79,22 +82,31 @@ function Treasury() {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [balanceInput, setBalanceInput] = useState("0");
 
+  const [expenses, setExpenses] = useState<TreasuryExpense[]>([]);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseDateInput, setExpenseDateInput] = useState(() => new Date().toISOString().slice(0, 10));
+  const [expenseReasonInput, setExpenseReasonInput] = useState("");
+  const [expenseAmountInput, setExpenseAmountInput] = useState("");
+  const [expenseNotesInput, setExpenseNotesInput] = useState("");
+
   const [memberDebtDetail, setMemberDebtDetail] = useState<MemberDirectoryRow | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [memberRows, amount, duesRows, balance] = await Promise.all([
+      const [memberRows, amount, duesRows, balance, expenseRows] = await Promise.all([
         isAdmin ? listMembersForAdmin(false) : listMembersDirectory(),
         getMonthlyDuesAmount(),
         listDuesPaymentsForYear(year),
         getCurrentBalance(),
+        listExpenses(),
       ]);
       setMembers(memberRows);
       setDuesAmount(amount);
       setPayments(duesRows);
       setCurrentBalance(balance);
+      setExpenses(expenseRows);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load treasury data.");
     } finally {
@@ -335,6 +347,47 @@ function Treasury() {
     }
   }
 
+  const totalExpenses = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
+
+  function openExpenseModal() {
+    setExpenseDateInput(new Date().toISOString().slice(0, 10));
+    setExpenseReasonInput("");
+    setExpenseAmountInput("");
+    setExpenseNotesInput("");
+    setShowExpenseModal(true);
+  }
+
+  async function submitExpense(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const amount = Number(expenseAmountInput);
+    if (!expenseReasonInput.trim() || Number.isNaN(amount) || amount < 0) return;
+    setIsSaving(true);
+    try {
+      await createExpenseByAdmin({
+        expense_date: expenseDateInput,
+        reason: expenseReasonInput.trim(),
+        amount,
+        notes: expenseNotesInput.trim() || null,
+      });
+      setShowExpenseModal(false);
+      await load();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save that expense.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDeleteExpense(expenseId: string) {
+    if (!isAdmin) return;
+    try {
+      await deleteExpenseByAdmin(expenseId);
+      setExpenses((prev) => prev.filter((expense) => expense.id !== expenseId));
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to delete that expense.");
+    }
+  }
+
   return (
     <div className="stack-xl">
       <div className="treasury-balance-hero">
@@ -461,6 +514,65 @@ function Treasury() {
           )}
         </Card>
       </div>
+
+      <Card>
+        <div className="treasury-table-header">
+          <h2>Expense Log</h2>
+          <p className="treasury-table-sub">Track chapter spending — date, reason, and amount.</p>
+        </div>
+        {isAdmin ? (
+          <div style={{ marginBottom: 16 }}>
+            <Button type="button" onClick={openExpenseModal}>
+              Add Expense
+            </Button>
+          </div>
+        ) : null}
+        {expenses.length === 0 ? (
+          <EmptyState title="No expenses logged" description="Recorded expenses will show up here." />
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Reason</th>
+                  <th>Notes</th>
+                  <th>Amount</th>
+                  {isAdmin ? <th /> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((expense) => (
+                  <tr key={expense.id}>
+                    <td>{expense.expense_date}</td>
+                    <td>{expense.reason}</td>
+                    <td>{expense.notes ?? ""}</td>
+                    <td>${expense.amount.toFixed(2)}</td>
+                    {isAdmin ? (
+                      <td>
+                        <Button type="button" variant="secondary" onClick={() => void handleDeleteExpense(expense.id)}>
+                          Delete
+                        </Button>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={3}>
+                    <strong>Total</strong>
+                  </td>
+                  <td>
+                    <strong>${totalExpenses.toFixed(2)}</strong>
+                  </td>
+                  {isAdmin ? <td /> : null}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </Card>
 
       {isLoading ? <LoadingSpinner label="Loading treasury data..." /> : null}
       {!isLoading && error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
@@ -633,6 +745,69 @@ function Treasury() {
           </div>
           <div className="modal-footer">
             <Button type="button" variant="secondary" onClick={() => setShowDuesSettingModal(false)} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={showExpenseModal} title="Add Expense" onClose={() => setShowExpenseModal(false)}>
+        <form className="stack-md" onSubmit={submitExpense}>
+          <div>
+            <label className="field-label" htmlFor="expense_date">
+              Date
+            </label>
+            <Input
+              id="expense_date"
+              type="date"
+              value={expenseDateInput}
+              onChange={(event) => setExpenseDateInput(event.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="expense_reason">
+              Reason
+            </label>
+            <Input
+              id="expense_reason"
+              type="text"
+              value={expenseReasonInput}
+              onChange={(event) => setExpenseReasonInput(event.target.value)}
+              placeholder="e.g. Chapter meeting supplies"
+              required
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="expense_amount">
+              Amount
+            </label>
+            <Input
+              id="expense_amount"
+              type="number"
+              step="0.01"
+              min="0"
+              value={expenseAmountInput}
+              onChange={(event) => setExpenseAmountInput(event.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="expense_notes">
+              Notes (optional)
+            </label>
+            <Input
+              id="expense_notes"
+              type="text"
+              value={expenseNotesInput}
+              onChange={(event) => setExpenseNotesInput(event.target.value)}
+            />
+          </div>
+          <div className="modal-footer">
+            <Button type="button" variant="secondary" onClick={() => setShowExpenseModal(false)} disabled={isSaving}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>

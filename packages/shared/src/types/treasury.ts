@@ -12,3 +12,14 @@ export interface DuesPayment {
   created_at: string;
   updated_at: string;
 }
+
+export interface TreasuryExpense {
+  id: string;
+  expense_date: string;
+  reason: string;
+  amount: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
