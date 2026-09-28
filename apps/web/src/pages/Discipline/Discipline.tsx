@@ -16,7 +16,7 @@ import {
 } from "../../components/ui";
 import { useAuth } from "../../hooks/useAuth";
 import { createStatusRecordByAdmin, listStatusRecords, updateStatusRecordByAdmin } from "../../services/disciplineService";
-import { listMembersForAdmin } from "../../services/memberService";
+import { listMembersDirectory, listMembersForAdmin } from "../../services/memberService";
 import type { MemberDirectoryRow } from "../../types/app";
 import { formatDate } from "../../utils/format";
 
@@ -89,7 +89,7 @@ function Discipline() {
     try {
       const [data, memberRows] = await Promise.all([
         listStatusRecords(),
-        isAdmin ? listMembersForAdmin(false) : Promise.resolve([] as MemberDirectoryRow[]),
+        isAdmin ? listMembersForAdmin(false) : listMembersDirectory(),
       ]);
       setRecords(data);
       setMembers(memberRows);
