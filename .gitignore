@@ -36,3 +36,4 @@ apps/mobile/android
 *.log
 .vscode/*
 !.vscode/extensions.json
+supabase/.temp/
