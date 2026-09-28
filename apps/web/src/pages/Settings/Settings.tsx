@@ -5,6 +5,8 @@ import { Badge, Button, Card, DataTable, EmptyState, ErrorState, Input, LoadingS
 import { useAuth } from "../../hooks/useAuth";
 import { listProfilesForAdmin, updateProfileAccessByAdmin } from "../../services/profileService";
 import { createUserByAdmin } from "../../services/adminUserService";
+import { listMembersForAdmin, updateMemberProfileLinkByAdmin } from "../../services/memberService";
+import type { MemberDirectoryRow } from "../../types/app";
 
 interface NewUserForm {
   username: string;
@@ -31,6 +33,7 @@ function Settings() {
   const isAdmin = role === "admin";
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [members, setMembers] = useState<MemberDirectoryRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,8 +49,9 @@ function Settings() {
     setError(null);
 
     try {
-      const data = await listProfilesForAdmin();
-      setProfiles(data);
+      const [profileRows, memberRows] = await Promise.all([listProfilesForAdmin(), listMembersForAdmin(false)]);
+      setProfiles(profileRows);
+      setMembers(memberRows);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load profiles.");
     } finally {
@@ -75,6 +79,18 @@ function Settings() {
       }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to update profile.");
+    } finally {
+      setIsSaving(null);
+    }
+  }
+
+  async function handleMemberLinkChange(profileId: string, memberId: string) {
+    try {
+      setIsSaving(profileId);
+      await updateMemberProfileLinkByAdmin(profileId, memberId || null);
+      await loadProfiles();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to update member link.");
     } finally {
       setIsSaving(null);
     }
@@ -143,7 +159,7 @@ function Settings() {
       {isAdmin ? (
         <Card>
           <div className="page-header" style={{ marginBottom: "var(--space-4)" }}>
-            <h2>Administrative Access</h2>
+            <h2>Users</h2>
             <Button type="button" onClick={openCreateModal}>
               + Create User
             </Button>
@@ -161,6 +177,7 @@ function Settings() {
                     <th>Username</th>
                     <th>Role</th>
                     <th>Login Enabled</th>
+                    <th>Linked Member</th>
                   </tr>
                 }
               >
@@ -205,6 +222,22 @@ function Settings() {
                       >
                         {row.login_enabled ? "Enabled" : "Disabled"}
                       </Button>
+                    </td>
+                    <td>
+                      <Select
+                        value={members.find((member) => member.profile_id === row.id)?.id ?? ""}
+                        disabled={isSaving === row.id}
+                        onChange={(event) => void handleMemberLinkChange(row.id, event.target.value)}
+                      >
+                        <option value="">— None —</option>
+                        {members
+                          .filter((member) => !member.profile_id || member.profile_id === row.id)
+                          .map((member) => (
+                            <option key={member.id} value={member.id}>
+                              {member.nickname?.trim() || member.full_name}
+                            </option>
+                          ))}
+                      </Select>
                     </td>
                   </tr>
                 ))}

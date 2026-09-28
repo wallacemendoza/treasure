@@ -19,12 +19,13 @@ import {
   archiveMemberByAdmin,
   createMemberByAdmin,
   getMemberByIdForAdmin,
+  getMyMemberId,
   listMembersDirectory,
   listMembersForAdmin,
   updateMemberByAdmin,
   type MemberPayload,
 } from "../../services/memberService";
-import { resolveMemberPhotoUrl, uploadMemberPhoto } from "../../services/storageService";
+import { deleteMemberPhoto, resolveMemberPhotoUrl, uploadMemberPhoto } from "../../services/storageService";
 import type { MemberDirectoryRow } from "../../types/app";
 import { cleanPhoneInput, formatDate, formatPhone, getAgeFromBirthDate, getYearsSinceDate } from "../../utils/format";
 
@@ -159,7 +160,7 @@ function formToPayload(form: FormState): MemberPayload {
 }
 
 function Members() {
-  const { role } = useAuth();
+  const { role, profile } = useAuth();
   const isAdmin = role === "admin";
 
   const [isLoading, setIsLoading] = useState(true);
@@ -167,6 +168,7 @@ function Members() {
   const [error, setError] = useState<string | null>(null);
 
   const [members, setMembers] = useState<MemberDirectoryRow[]>([]);
+  const [myMemberId, setMyMemberId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
@@ -207,12 +209,20 @@ function Members() {
       );
 
       setMemberPhotoUrls(Object.fromEntries(resolvedEntries));
+
+      if (!isAdmin && profile?.id) {
+        try {
+          setMyMemberId(await getMyMemberId(profile.id));
+        } catch {
+          setMyMemberId(null);
+        }
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load members.");
     } finally {
       setIsLoading(false);
     }
-  }, [archivedFilter, isAdmin]);
+  }, [archivedFilter, isAdmin, profile?.id]);
 
   useEffect(() => {
     void loadMembers();
@@ -256,6 +266,7 @@ function Members() {
         return;
       }
       setFormState(mapMemberToForm(member));
+      setSelectedMember(member);
       setEditingMemberId(member.id);
       setPhotoFile(null);
       setPhotoPreviewUrl(memberPhotoUrls[member.id] ?? member.photo_url ?? null);
@@ -269,7 +280,9 @@ function Members() {
 
   async function handleMemberClick(memberId: string) {
     if (!isAdmin) {
-      setSelectedMember(null);
+      if (memberId === myMemberId) {
+        await openEditModal(memberId);
+      }
       return;
     }
 
@@ -310,6 +323,30 @@ function Members() {
     }
 
     setPhotoPreviewUrl(URL.createObjectURL(nextFile));
+  }
+
+  async function handleRemovePhoto() {
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+
+    if (!editingMemberId) return;
+
+    const currentPath = selectedMember?.photo_url ?? null;
+    if (!currentPath) return;
+
+    setIsSaving(true);
+    setFormError(null);
+    try {
+      await deleteMemberPhoto(currentPath);
+      await updateMemberByAdmin(editingMemberId, { photo_url: null });
+      setSelectedMember((prev) => (prev ? { ...prev, photo_url: null } : prev));
+      setMemberPhotoUrls((prev) => ({ ...prev, [editingMemberId]: null }));
+      await loadMembers();
+    } catch (removeError) {
+      setFormError(removeError instanceof Error ? removeError.message : "Unable to remove photo.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function validateForm() {
@@ -459,6 +496,12 @@ function Members() {
                           </Button>
                         ) : null}
                       </div>
+                    ) : member.id === myMemberId ? (
+                      <div className="member-card-actions member-card-actions-top">
+                        <Button type="button" size="sm" variant="ghost" onClick={() => void openEditModal(member.id)}>
+                          Edit My Info
+                        </Button>
+                      </div>
                     ) : null}
                     <Avatar name={member.full_name} src={memberPhotoUrls[member.id]} className="avatar-card" />
                   </div>
@@ -572,7 +615,7 @@ function Members() {
 
       <Modal
         open={showFormModal}
-        title={editingMemberId ? "Edit Member" : "Add Member"}
+        title={editingMemberId ? (isAdmin ? "Edit Member" : "Edit My Info") : "Add Member"}
         onClose={() => setShowFormModal(false)}
       >
         <form className="stack-md" onSubmit={submitForm}>
@@ -585,6 +628,7 @@ function Members() {
                 id="full_name"
                 value={formState.full_name}
                 onChange={(event) => updateForm("full_name", event.target.value)}
+                disabled={!isAdmin}
                 required
               />
             </div>
@@ -608,6 +652,7 @@ function Members() {
                 id="member_rank"
                 value={formState.member_rank}
                 onChange={(event) => updateForm("member_rank", event.target.value as Member["member_rank"])}
+                disabled={!isAdmin}
               >
                 {RANK_OPTIONS.map((rank) => (
                   <option key={rank} value={rank}>
@@ -661,6 +706,7 @@ function Members() {
                 type="date"
                 value={formState.date_joined}
                 onChange={(event) => updateForm("date_joined", event.target.value)}
+                disabled={!isAdmin}
               />
             </div>
 
@@ -673,6 +719,7 @@ function Members() {
                 type="date"
                 value={formState.full_patch_since}
                 onChange={(event) => updateForm("full_patch_since", event.target.value)}
+                disabled={!isAdmin}
               />
             </div>
 
@@ -684,6 +731,7 @@ function Members() {
                 id="active"
                 value={String(formState.active)}
                 onChange={(event) => updateForm("active", event.target.value === "true")}
+                disabled={!isAdmin}
               >
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
@@ -806,6 +854,9 @@ function Members() {
               {photoPreviewUrl ? (
                 <div className="member-photo-preview-wrap">
                   <img className="member-photo-preview" src={photoPreviewUrl} alt="Member preview" />
+                  <Button type="button" size="sm" variant="danger" onClick={() => void handleRemovePhoto()} disabled={isSaving}>
+                    Remove Photo
+                  </Button>
                 </div>
               ) : null}
             </div>
@@ -854,6 +905,7 @@ function Members() {
               rows={4}
               value={formState.notes}
               onChange={(event) => updateForm("notes", event.target.value)}
+              disabled={!isAdmin}
             />
           </div>
 
@@ -864,7 +916,7 @@ function Members() {
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : editingMemberId ? "Update Member" : "Create Member"}
+              {isSaving ? "Saving..." : editingMemberId ? (isAdmin ? "Update Member" : "Save My Info") : "Create Member"}
             </Button>
           </div>
         </form>

@@ -57,3 +57,12 @@ export async function uploadMemberPhoto(file: File, memberId: string, existingPa
 
   return path;
 }
+
+export async function deleteMemberPhoto(photoPath: string) {
+  if (isRemoteUrl(photoPath)) return;
+
+  const { error } = await supabase.storage.from(PROFILE_PHOTOS_BUCKET).remove([photoPath]);
+  if (error) {
+    throw new Error(getStorageErrorMessage(error.message));
+  }
+}

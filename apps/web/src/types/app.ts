@@ -12,6 +12,7 @@ export interface AuthState {
 
 export interface MemberDirectoryRow {
   id: string;
+  profile_id: string | null;
   full_name: string;
   nickname: string | null;
   member_rank: Member["member_rank"];

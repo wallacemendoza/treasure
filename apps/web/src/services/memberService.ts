@@ -138,7 +138,7 @@ export async function listMembersDirectory(): Promise<MemberDirectoryRow[]> {
 
     const { data: legacyData, error: legacyError } = await supabase
       .from("members")
-      .select("id, full_name, member_rank, active, city, state, photo_url, date_joined")
+      .select("id, profile_id, full_name, member_rank, active, city, state, photo_url, date_joined")
       .is("archived_at", null)
       .order("full_name", { ascending: true });
 
@@ -174,7 +174,7 @@ export async function listMembersDirectory(): Promise<MemberDirectoryRow[]> {
 export async function listMembersForAdmin(includeArchived: boolean): Promise<MemberDirectoryRow[]> {
   let query = supabase
     .from("members")
-    .select("id, full_name, nickname, member_rank, active, dues_mandatory, city, state, photo_url, birth_date, date_joined, full_patch_since, archived_at, prior_balance_due, motorcycle_brand, motorcycle_model, motorcycle_color, motorcycle_year, motorcycle_plate")
+    .select("id, profile_id, full_name, nickname, member_rank, active, dues_mandatory, city, state, photo_url, birth_date, date_joined, full_patch_since, archived_at, prior_balance_due, motorcycle_brand, motorcycle_model, motorcycle_color, motorcycle_year, motorcycle_plate")
     .order("full_name", { ascending: true });
 
   if (!includeArchived) {
@@ -189,7 +189,7 @@ export async function listMembersForAdmin(includeArchived: boolean): Promise<Mem
 
     let legacyQuery = supabase
       .from("members")
-      .select("id, full_name, member_rank, active, city, state, photo_url, date_joined, archived_at")
+      .select("id, profile_id, full_name, member_rank, active, city, state, photo_url, date_joined, archived_at")
       .order("full_name", { ascending: true });
 
     if (!includeArchived) {
@@ -306,4 +306,20 @@ export async function archiveMemberByAdmin(memberId: string): Promise<void> {
     .eq("id", memberId);
 
   if (error) throw new Error(error.message);
+}
+
+export async function getMyMemberId(profileId: string): Promise<string | null> {
+  const { data, error } = await supabase.from("members").select("id").eq("profile_id", profileId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.id ?? null;
+}
+
+export async function updateMemberProfileLinkByAdmin(profileId: string, memberId: string | null): Promise<void> {
+  const { error: clearError } = await supabase.from("members").update({ profile_id: null }).eq("profile_id", profileId);
+  if (clearError) throw new Error(clearError.message);
+
+  if (memberId) {
+    const { error } = await supabase.from("members").update({ profile_id: profileId }).eq("id", memberId);
+    if (error) throw new Error(error.message);
+  }
 }
