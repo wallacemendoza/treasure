@@ -1,4 +1,4 @@
-import type { DuesPayment, DuesStatus, TreasuryExpense } from "@treasure/shared";
+import type { DuesPayment, DuesStatus, LoanStatus, TreasuryExpense, TreasuryLoan } from "@treasure/shared";
 import { supabase } from "../lib/supabase";
 
 export async function getMonthlyDuesAmount(): Promise<number> {
@@ -104,5 +104,42 @@ export async function createExpenseByAdmin(payload: ExpensePayload): Promise<voi
 
 export async function deleteExpenseByAdmin(expenseId: string): Promise<void> {
   const { error } = await supabase.from("treasury_expenses").delete().eq("id", expenseId);
+  if (error) throw new Error(error.message);
+}
+
+export async function listLoans(): Promise<TreasuryLoan[]> {
+  const { data, error } = await supabase
+    .from("treasury_loans")
+    .select("*")
+    .order("loan_date", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TreasuryLoan[];
+}
+
+export interface LoanPayload {
+  member_id: string;
+  reason: string;
+  loan_date: string;
+  amount: number;
+  notes: string | null;
+}
+
+export async function createLoanByAdmin(payload: LoanPayload): Promise<void> {
+  const { error } = await supabase.from("treasury_loans").insert(payload);
+  if (error) throw new Error(error.message);
+}
+
+export async function setLoanStatusByAdmin(loanId: string, status: LoanStatus): Promise<void> {
+  const { error } = await supabase
+    .from("treasury_loans")
+    .update({ status, repaid_at: status === "repaid" ? new Date().toISOString().slice(0, 10) : null })
+    .eq("id", loanId);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteLoanByAdmin(loanId: string): Promise<void> {
+  const { error } = await supabase.from("treasury_loans").delete().eq("id", loanId);
   if (error) throw new Error(error.message);
 }

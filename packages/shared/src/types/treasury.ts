@@ -23,3 +23,19 @@ export interface TreasuryExpense {
   created_at: string;
   updated_at: string;
 }
+
+export type LoanStatus = "outstanding" | "repaid";
+
+export interface TreasuryLoan {
+  id: string;
+  member_id: string;
+  reason: string;
+  loan_date: string;
+  amount: number;
+  notes: string | null;
+  status: LoanStatus;
+  repaid_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}

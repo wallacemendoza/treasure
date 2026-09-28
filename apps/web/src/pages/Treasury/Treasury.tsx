@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import type { DuesPayment, DuesStatus, TreasuryExpense } from "@treasure/shared";
+import type { DuesPayment, DuesStatus, TreasuryExpense, TreasuryLoan } from "@treasure/shared";
 import {
   Badge,
   Button,
@@ -17,13 +17,17 @@ import { useAuth } from "../../hooks/useAuth";
 import { listMembersDirectory, listMembersForAdmin } from "../../services/memberService";
 import {
   createExpenseByAdmin,
+  createLoanByAdmin,
   deleteExpenseByAdmin,
+  deleteLoanByAdmin,
   getCurrentBalance,
   getMonthlyDuesAmount,
   listDuesPaymentsForYear,
   listExpenses,
+  listLoans,
   setCurrentBalanceByAdmin,
   setDuesMandatoryByAdmin,
+  setLoanStatusByAdmin,
   setMonthlyDuesAmountByAdmin,
   setPriorBalanceByAdmin,
   upsertDuesCellByAdmin,
@@ -89,24 +93,34 @@ function Treasury() {
   const [expenseAmountInput, setExpenseAmountInput] = useState("");
   const [expenseNotesInput, setExpenseNotesInput] = useState("");
 
+  const [loans, setLoans] = useState<TreasuryLoan[]>([]);
+  const [showLoanModal, setShowLoanModal] = useState(false);
+  const [loanMemberIdInput, setLoanMemberIdInput] = useState("");
+  const [loanDateInput, setLoanDateInput] = useState(() => new Date().toISOString().slice(0, 10));
+  const [loanReasonInput, setLoanReasonInput] = useState("");
+  const [loanAmountInput, setLoanAmountInput] = useState("");
+  const [loanNotesInput, setLoanNotesInput] = useState("");
+
   const [memberDebtDetail, setMemberDebtDetail] = useState<MemberDirectoryRow | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [memberRows, amount, duesRows, balance, expenseRows] = await Promise.all([
+      const [memberRows, amount, duesRows, balance, expenseRows, loanRows] = await Promise.all([
         isAdmin ? listMembersForAdmin(false) : listMembersDirectory(),
         getMonthlyDuesAmount(),
         listDuesPaymentsForYear(year),
         getCurrentBalance(),
         listExpenses(),
+        listLoans(),
       ]);
       setMembers(memberRows);
       setDuesAmount(amount);
       setPayments(duesRows);
       setCurrentBalance(balance);
       setExpenses(expenseRows);
+      setLoans(loanRows);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load treasury data.");
     } finally {
@@ -137,6 +151,15 @@ function Treasury() {
     }
     return map;
   }, [payments]);
+
+  const loansByMember = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const loan of loans) {
+      if (loan.status !== "outstanding") continue;
+      map.set(loan.member_id, (map.get(loan.member_id) ?? 0) + loan.amount);
+    }
+    return map;
+  }, [loans]);
 
   const activeMembers = useMemo(() => members.filter((m) => m.active && !m.archived_at), [members]);
 
@@ -187,7 +210,9 @@ function Treasury() {
     }
 
     const outstandingTotal =
-      outstandingYear + activeMembers.reduce((sum, m) => sum + (priorBalances[m.id] ?? 0), 0);
+      outstandingYear +
+      activeMembers.reduce((sum, m) => sum + (priorBalances[m.id] ?? 0), 0) +
+      activeMembers.reduce((sum, m) => sum + (loansByMember.get(m.id) ?? 0), 0);
 
     return {
       activeCount: activeMembers.length,
@@ -197,7 +222,7 @@ function Treasury() {
       outstandingTotal,
       paidInFull,
     };
-  }, [activeMembers, currentMonth, duesAmount, paymentsByMember, priorBalances]);
+  }, [activeMembers, currentMonth, duesAmount, loansByMember, paymentsByMember, priorBalances]);
 
   const monthlyBreakdown = useMemo(() => {
     return MONTHS.map((label, idx) => {
@@ -239,22 +264,24 @@ function Treasury() {
 
   const topDebtors = useMemo(() => {
     return activeMembers
-      .filter((m) => m.dues_mandatory)
       .map((member) => {
         const monthMap = paymentsByMember.get(member.id);
         let unpaidMonths = 0;
-        for (let month = 1; month <= currentMonth; month += 1) {
-          const status = monthMap?.get(month)?.status ?? "unpaid";
-          if (status === "unpaid") unpaidMonths += 1;
+        if (member.dues_mandatory) {
+          for (let month = 1; month <= currentMonth; month += 1) {
+            const status = monthMap?.get(month)?.status ?? "unpaid";
+            if (status === "unpaid") unpaidMonths += 1;
+          }
         }
         const prior = priorBalances[member.id] ?? 0;
-        const totalOwed = unpaidMonths * duesAmount + prior;
-        return { ...member, unpaidMonths, totalOwed, prior };
+        const loanOwed = loansByMember.get(member.id) ?? 0;
+        const totalOwed = unpaidMonths * duesAmount + prior + loanOwed;
+        return { ...member, unpaidMonths, totalOwed, prior, loanOwed };
       })
       .filter((m) => m.totalOwed > 0)
       .sort((a, b) => b.totalOwed - a.totalOwed)
       .slice(0, 6);
-  }, [activeMembers, currentMonth, paymentsByMember, duesAmount, priorBalances]);
+  }, [activeMembers, currentMonth, paymentsByMember, duesAmount, priorBalances, loansByMember]);
 
   function openCell(memberId: string, memberName: string, month: number) {
     if (!isAdmin) return;
@@ -388,6 +415,69 @@ function Treasury() {
     }
   }
 
+  const outstandingLoanTotal = useMemo(
+    () => loans.filter((loan) => loan.status === "outstanding").reduce((sum, loan) => sum + loan.amount, 0),
+    [loans],
+  );
+
+  function memberLabel(memberId: string) {
+    const member = members.find((row) => row.id === memberId);
+    if (!member) return "Unknown member";
+    return member.nickname?.trim() || member.full_name;
+  }
+
+  function openLoanModal() {
+    setLoanMemberIdInput(sortedLedgerMembers[0]?.id ?? "");
+    setLoanDateInput(new Date().toISOString().slice(0, 10));
+    setLoanReasonInput("");
+    setLoanAmountInput("");
+    setLoanNotesInput("");
+    setShowLoanModal(true);
+  }
+
+  async function submitLoan(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const amount = Number(loanAmountInput);
+    if (!loanMemberIdInput || !loanReasonInput.trim() || Number.isNaN(amount) || amount < 0) return;
+    setIsSaving(true);
+    try {
+      await createLoanByAdmin({
+        member_id: loanMemberIdInput,
+        reason: loanReasonInput.trim(),
+        loan_date: loanDateInput,
+        amount,
+        notes: loanNotesInput.trim() || null,
+      });
+      setShowLoanModal(false);
+      await load();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save that loan.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleToggleLoanStatus(loan: TreasuryLoan) {
+    if (!isAdmin) return;
+    const nextStatus = loan.status === "outstanding" ? "repaid" : "outstanding";
+    try {
+      await setLoanStatusByAdmin(loan.id, nextStatus);
+      await load();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to update that loan.");
+    }
+  }
+
+  async function handleDeleteLoan(loanId: string) {
+    if (!isAdmin) return;
+    try {
+      await deleteLoanByAdmin(loanId);
+      setLoans((prev) => prev.filter((loan) => loan.id !== loanId));
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to delete that loan.");
+    }
+  }
+
   return (
     <div className="stack-xl">
       <div className="treasury-balance-hero">
@@ -505,6 +595,9 @@ function Treasury() {
                     <span className="treas-debtor-detail">
                       {member.unpaidMonths > 0 ? `${member.unpaidMonths} mo unpaid` : ""}
                       {member.prior > 0 ? `${member.unpaidMonths > 0 ? " · " : ""}prior $${member.prior.toFixed(0)}` : ""}
+                      {member.loanOwed > 0
+                        ? `${member.unpaidMonths > 0 || member.prior > 0 ? " · " : ""}loan $${member.loanOwed.toFixed(0)}`
+                        : ""}
                     </span>
                   </div>
                   <span className="treas-debtor-amount">${member.totalOwed.toFixed(2)}</span>
@@ -566,6 +659,80 @@ function Treasury() {
                   <td>
                     <strong>${totalExpenses.toFixed(2)}</strong>
                   </td>
+                  {isAdmin ? <td /> : null}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <div className="treasury-table-header">
+          <h2>Loans</h2>
+          <p className="treasury-table-sub">
+            Money lent to a member — reason, date, amount, and who's responsible for paying it back. Outstanding
+            loans count toward that member's total owed.
+          </p>
+        </div>
+        {isAdmin ? (
+          <div style={{ marginBottom: 16 }}>
+            <Button type="button" onClick={openLoanModal}>
+              Add Loan
+            </Button>
+          </div>
+        ) : null}
+        {loans.length === 0 ? (
+          <EmptyState title="No loans logged" description="Recorded loans will show up here." />
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Member</th>
+                  <th>Reason</th>
+                  <th>Notes</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  {isAdmin ? <th /> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {loans.map((loan) => (
+                  <tr key={loan.id}>
+                    <td>{loan.loan_date}</td>
+                    <td>{memberLabel(loan.member_id)}</td>
+                    <td>{loan.reason}</td>
+                    <td>{loan.notes ?? ""}</td>
+                    <td>${loan.amount.toFixed(2)}</td>
+                    <td>
+                      <Badge tone={loan.status === "outstanding" ? "danger" : "success"}>
+                        {loan.status === "outstanding" ? "Outstanding" : "Repaid"}
+                      </Badge>
+                    </td>
+                    {isAdmin ? (
+                      <td style={{ display: "flex", gap: 8 }}>
+                        <Button type="button" variant="secondary" onClick={() => void handleToggleLoanStatus(loan)}>
+                          {loan.status === "outstanding" ? "Mark Repaid" : "Mark Outstanding"}
+                        </Button>
+                        <Button type="button" variant="secondary" onClick={() => void handleDeleteLoan(loan.id)}>
+                          Delete
+                        </Button>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={4}>
+                    <strong>Outstanding Total</strong>
+                  </td>
+                  <td>
+                    <strong>${outstandingLoanTotal.toFixed(2)}</strong>
+                  </td>
+                  <td />
                   {isAdmin ? <td /> : null}
                 </tr>
               </tfoot>
@@ -817,6 +984,84 @@ function Treasury() {
         </form>
       </Modal>
 
+      <Modal open={showLoanModal} title="Add Loan" onClose={() => setShowLoanModal(false)}>
+        <form className="stack-md" onSubmit={submitLoan}>
+          <div>
+            <label className="field-label" htmlFor="loan_member">
+              Responsible Member
+            </label>
+            <Select id="loan_member" value={loanMemberIdInput} onChange={(event) => setLoanMemberIdInput(event.target.value)} required>
+              <option value="" disabled>
+                Select a member
+              </option>
+              {sortedLedgerMembers.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.nickname?.trim() || member.full_name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="field-label" htmlFor="loan_date">
+              Date
+            </label>
+            <Input
+              id="loan_date"
+              type="date"
+              value={loanDateInput}
+              onChange={(event) => setLoanDateInput(event.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="loan_reason">
+              Reason
+            </label>
+            <Input
+              id="loan_reason"
+              type="text"
+              value={loanReasonInput}
+              onChange={(event) => setLoanReasonInput(event.target.value)}
+              placeholder="e.g. Emergency bike repair"
+              required
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="loan_amount">
+              Amount
+            </label>
+            <Input
+              id="loan_amount"
+              type="number"
+              step="0.01"
+              min="0"
+              value={loanAmountInput}
+              onChange={(event) => setLoanAmountInput(event.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="loan_notes">
+              Notes (optional)
+            </label>
+            <Input
+              id="loan_notes"
+              type="text"
+              value={loanNotesInput}
+              onChange={(event) => setLoanNotesInput(event.target.value)}
+            />
+          </div>
+          <div className="modal-footer">
+            <Button type="button" variant="secondary" onClick={() => setShowLoanModal(false)} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Member debt detail modal */}
       <Modal
         open={Boolean(memberDebtDetail)}
@@ -831,7 +1076,8 @@ function Treasury() {
             if (status === "unpaid" && memberDebtDetail.dues_mandatory) debt2026 += duesAmount;
           }
           const priorDebt = priorBalances[memberDebtDetail.id] ?? 0;
-          const totalDebt = debt2026 + priorDebt;
+          const loanDebt = loansByMember.get(memberDebtDetail.id) ?? 0;
+          const totalDebt = debt2026 + priorDebt + loanDebt;
 
           return (
             <div className="treas-detail-modal">
@@ -844,6 +1090,10 @@ function Treasury() {
                 <div className="treas-detail-stat">
                   <p className="treas-detail-label">Prior Balance</p>
                   <p className={`treas-detail-value${priorDebt > 0 ? " treas-danger" : " treas-ok"}`}>${priorDebt.toFixed(2)}</p>
+                </div>
+                <div className="treas-detail-stat">
+                  <p className="treas-detail-label">Loans Owed</p>
+                  <p className={`treas-detail-value${loanDebt > 0 ? " treas-danger" : " treas-ok"}`}>${loanDebt.toFixed(2)}</p>
                 </div>
                 <div className="treas-detail-stat treas-detail-total">
                   <p className="treas-detail-label">Total Owed</p>
