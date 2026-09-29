@@ -36,16 +36,21 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
+  const usernamePattern = username.replace(/[\\%_]/g, "\\$&");
   const { data: existingUsername, error: usernameError } = await admin
     .from("profiles")
     .select("id")
-    .ilike("username", username)
+    .ilike("username", usernamePattern)
     .maybeSingle();
-  if (usernameError) return json({ error: "Unable to submit the request right now." }, 500);
+  if (usernameError) {
+    console.error("request-access username lookup failed", usernameError.message);
+    return json({ error: "Unable to validate that username right now. Please try again." }, 500);
+  }
   if (existingUsername) return json({ accepted: true });
 
   const { error } = await admin.from("access_requests").insert({ full_name: fullName, username, email });
   if (error && !error.message.toLowerCase().includes("duplicate key")) {
+    console.error("request-access insert failed", error.message, error.code);
     return json({ error: "Unable to submit the request right now." }, 500);
   }
 

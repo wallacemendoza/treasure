@@ -9,9 +9,25 @@ export interface AccessRequest {
   requested_at: string;
 }
 
+async function getFunctionErrorMessage(error: unknown, fallback: string): Promise<string> {
+  if (error && typeof error === "object" && "context" in error) {
+    const context = (error as { context?: unknown }).context;
+    if (context && typeof context === "object" && "json" in context && typeof context.json === "function") {
+      try {
+        const body = await context.json() as { error?: unknown; message?: unknown };
+        if (typeof body.error === "string") return body.error;
+        if (typeof body.message === "string") return body.message;
+      } catch {
+        return error instanceof Error ? error.message : fallback;
+      }
+    }
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
 export async function submitAccessRequest(payload: Pick<AccessRequest, "full_name" | "username" | "email">): Promise<void> {
   const { data, error } = await supabase.functions.invoke("request-access", { body: payload });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(await getFunctionErrorMessage(error, "Unable to send the access request."));
   if (data?.error) throw new Error(data.error);
 }
 
