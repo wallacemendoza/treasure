@@ -5,6 +5,7 @@ import AppLayout from "./layouts/AppLayout";
 import { AuthProvider } from "./context/AuthContext";
 
 import Login from "./pages/Login/Login";
+import UpdatePassword from "./pages/Login/UpdatePassword";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Members from "./pages/Members/Members";
 import Events from "./pages/Events/Events";
@@ -25,6 +26,7 @@ function App() {
               </PublicRoute>
             }
           />
+          <Route path="/update-password" element={<UpdatePassword />} />
 
           <Route
             element={

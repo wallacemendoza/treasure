@@ -6,6 +6,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { listProfilesForAdmin, updateProfileAccessByAdmin } from "../../services/profileService";
 import { createUserByAdmin } from "../../services/adminUserService";
 import { listMembersForAdmin, updateMemberProfileLinkByAdmin } from "../../services/memberService";
+import { listPendingAccessRequests, reviewAccessRequest } from "../../services/accessRequestService";
+import type { AccessRequest } from "../../services/accessRequestService";
 import type { MemberDirectoryRow } from "../../types/app";
 
 interface NewUserForm {
@@ -34,6 +36,8 @@ function Settings() {
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [members, setMembers] = useState<MemberDirectoryRow[]>([]);
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
+  const [selectedMemberByRequest, setSelectedMemberByRequest] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,9 +53,14 @@ function Settings() {
     setError(null);
 
     try {
-      const [profileRows, memberRows] = await Promise.all([listProfilesForAdmin(), listMembersForAdmin(false)]);
+      const [profileRows, memberRows, requests] = await Promise.all([
+        listProfilesForAdmin(),
+        listMembersForAdmin(false),
+        listPendingAccessRequests(),
+      ]);
       setProfiles(profileRows);
       setMembers(memberRows);
+      setAccessRequests(requests);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load profiles.");
     } finally {
@@ -91,6 +100,20 @@ function Settings() {
       await loadProfiles();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to update member link.");
+    } finally {
+      setIsSaving(null);
+    }
+  }
+
+  async function handleAccessRequestReview(request: AccessRequest, action: "approve" | "reject") {
+    const busyKey = `request:${request.id}`;
+    try {
+      setIsSaving(busyKey);
+      setError(null);
+      await reviewAccessRequest(request.id, action, selectedMemberByRequest[request.id] || null);
+      await loadProfiles();
+    } catch (reviewError) {
+      setError(reviewError instanceof Error ? reviewError.message : "Unable to review access request.");
     } finally {
       setIsSaving(null);
     }
@@ -164,6 +187,72 @@ function Settings() {
               + Create User
             </Button>
           </div>
+          <section className="stack-md" aria-labelledby="access-requests-heading">
+            <div className="page-header" style={{ marginBottom: "var(--space-2)" }}>
+              <h3 id="access-requests-heading">Access Requests</h3>
+              <Badge tone={accessRequests.length ? "warning" : "default"}>{accessRequests.length} pending</Badge>
+            </div>
+            {accessRequests.length === 0 ? (
+              <p className="table-subtext">No pending access requests.</p>
+            ) : (
+              <DataTable
+                columns={
+                  <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Requested</th>
+                    <th>Link Member</th>
+                    <th>Review</th>
+                  </tr>
+                }
+              >
+                {accessRequests.map((request) => (
+                  <tr key={request.id}>
+                    <td>{request.full_name}</td>
+                    <td>{request.username}</td>
+                    <td>{request.email}</td>
+                    <td>{new Date(request.requested_at).toLocaleDateString()}</td>
+                    <td>
+                      <Select
+                        value={selectedMemberByRequest[request.id] ?? ""}
+                        disabled={isSaving === `request:${request.id}`}
+                        onChange={(event) =>
+                          setSelectedMemberByRequest((previous) => ({ ...previous, [request.id]: event.target.value }))
+                        }
+                      >
+                        <option value="">No member link</option>
+                        {members.filter((member) => !member.profile_id).map((member) => (
+                          <option key={member.id} value={member.id}>
+                            {member.nickname?.trim() || member.full_name}
+                          </option>
+                        ))}
+                      </Select>
+                    </td>
+                    <td className="member-card-actions">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={isSaving === `request:${request.id}`}
+                        onClick={() => void handleAccessRequestReview(request, "approve")}
+                      >
+                        {isSaving === `request:${request.id}` ? "Sending..." : "Approve & Email"}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="danger"
+                        disabled={isSaving === `request:${request.id}`}
+                        onClick={() => void handleAccessRequestReview(request, "reject")}
+                      >
+                        Reject
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </DataTable>
+            )}
+          </section>
           {isLoading ? <LoadingSpinner label="Loading profiles..." /> : null}
           {!isLoading && error ? <ErrorState message={error} onRetry={() => void loadProfiles()} /> : null}
 
