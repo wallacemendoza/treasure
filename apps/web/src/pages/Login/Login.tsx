@@ -17,6 +17,7 @@ function Login() {
   const [username, setUsername] = useState("");
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [emailWarning, setEmailWarning] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -27,11 +28,17 @@ function Login() {
     setLoading(true);
     setMessage("");
     setSuccessMessage("");
+    setEmailWarning(false);
 
     try {
       if (mode === "request") {
-        await submitAccessRequest({ full_name: fullName, username, email: identifier });
-        setSuccessMessage("Your access request has been sent to the chapter admins. If approved, you will receive an email with a link to set your password.");
+        const emailSent = await submitAccessRequest({ full_name: fullName, username, email: identifier });
+        setSuccessMessage(
+          emailSent
+            ? "Your request was sent to the chapter admins. A confirmation email is on its way; if approved, you will receive another email with a link to set your password."
+            : "Your request was received by the chapter admins, but we could not send a confirmation email. If approved, an admin will contact you with account setup instructions.",
+        );
+        setEmailWarning(!emailSent);
         setMode("signin");
       } else if (mode === "recovery") {
         const { error } = await supabase.auth.resetPasswordForEmail(identifier.trim(), {
@@ -61,6 +68,7 @@ function Login() {
     setMode(nextMode);
     setMessage("");
     setSuccessMessage("");
+    setEmailWarning(false);
   }
 
   return (
@@ -118,7 +126,7 @@ function Login() {
           ) : null}
 
           {message ? <p className="form-error">{message}</p> : null}
-          {successMessage ? <p className="form-success">{successMessage}</p> : null}
+          {successMessage ? <p className={emailWarning ? "form-warning" : "form-success"}>{successMessage}</p> : null}
 
           <Button type="submit" disabled={!canSubmit}>
             {loading ? "Please wait..." : mode === "signin" ? "Sign In" : mode === "request" ? "Request Access" : "Send Reset Link"}

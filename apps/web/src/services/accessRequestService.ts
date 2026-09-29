@@ -25,10 +25,11 @@ async function getFunctionErrorMessage(error: unknown, fallback: string): Promis
   return error instanceof Error ? error.message : fallback;
 }
 
-export async function submitAccessRequest(payload: Pick<AccessRequest, "full_name" | "username" | "email">): Promise<void> {
+export async function submitAccessRequest(payload: Pick<AccessRequest, "full_name" | "username" | "email">): Promise<boolean> {
   const { data, error } = await supabase.functions.invoke("request-access", { body: payload });
   if (error) throw new Error(await getFunctionErrorMessage(error, "Unable to send the access request."));
   if (data?.error) throw new Error(data.error);
+  return data?.email_sent === true;
 }
 
 export async function listPendingAccessRequests(): Promise<AccessRequest[]> {
